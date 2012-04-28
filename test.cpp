@@ -71,6 +71,7 @@ void test_rational(){
         std::vector<int>
     > rational;
     rational zero, a(2), b(a), c(std::move(zero)), d(10), e(rational::integer_type(29)), f(a + a), g;
+    bool ret_comp;
 
     std::cout << "start test_rational\n";
 
@@ -78,45 +79,45 @@ void test_rational(){
     g = 1 - a;
     g = 1 * a;
     g = 1 / a;
-    g = 1 < a;
-    g = 1 > a;
-    g = 1 <= a;
-    g = 1 >= a;
-    g = 1 == a;
-    g = 1 != a;
+    ret_comp = 1 < a;
+    ret_comp = 1 > a;
+    ret_comp = 1 <= a;
+    ret_comp = 1 >= a;
+    ret_comp = 1 == a;
+    ret_comp = 1 != a;
 
     g = a + 1;
     g = a - 1;
     g = a * 1;
     g = a / 1;
-    g = a < 1;
-    g = a > 1;
-    g = a <= 1;
-    g = a >= 1;
-    g = a == 1;
-    g = a != 1;
+    ret_comp = a < 1;
+    ret_comp = a > 1;
+    ret_comp = a <= 1;
+    ret_comp = a >= 1;
+    ret_comp = a == 1;
+    ret_comp = a != 1;
 
     g = f + a;
     g = f - a;
     g = f * a;
     g = f / a;
-    g = f < a;
-    g = f > a;
-    g = f <= a;
-    g = f >= a;
-    g = f == a;
-    g = f != a;
+    ret_comp = f < a;
+    ret_comp = f > a;
+    ret_comp = f <= a;
+    ret_comp = f >= a;
+    ret_comp = f == a;
+    ret_comp = f != a;
 
     g = a + f;
     g = a - f;
     g = a * f;
     g = a / f;
-    g = a < f;
-    g = a > f;
-    g = a <= f;
-    g = a >= f;
-    g = a == f;
-    g = a != f;
+    ret_comp = a < f;
+    ret_comp = a > f;
+    ret_comp = a <= f;
+    ret_comp = a >= f;
+    ret_comp = a == f;
+    ret_comp = a != f;
 
     std::cout << "end of test_rational\n\n";
 }
@@ -130,6 +131,7 @@ void test_primitive_mp_float(){
         std::vector<int>
     > floating_point;
     floating_point a(10.0), f(a + a), g;
+    bool ret_comp;
 
     std::cout << "start test_primitive_mp_float\n";
 
@@ -137,45 +139,45 @@ void test_primitive_mp_float(){
     g = 1 - a;
     g = 1 * a;
     g = 1 / a;
-    g = 1 < a;
-    g = 1 > a;
-    g = 1 <= a;
-    g = 1 >= a;
-    g = 1 == a;
-    g = 1 != a;
+    ret_comp = 1 < a;
+    ret_comp = 1 > a;
+    ret_comp = 1 <= a;
+    ret_comp = 1 >= a;
+    ret_comp = 1 == a;
+    ret_comp = 1 != a;
 
     g = a + 1;
     g = a - 1;
     g = a * 1;
     g = a / 1;
-    g = a < 1;
-    g = a > 1;
-    g = a <= 1;
-    g = a >= 1;
-    g = a == 1;
-    g = a != 1;
+    ret_comp = a < 1;
+    ret_comp = a > 1;
+    ret_comp = a <= 1;
+    ret_comp = a >= 1;
+    ret_comp = a == 1;
+    ret_comp = a != 1;
 
     g = f + a;
     g = f - a;
     g = f * a;
     g = f / a;
-    g = f < a;
-    g = f > a;
-    g = f <= a;
-    g = f >= a;
-    g = f == a;
-    g = f != a;
+    ret_comp = f < a;
+    ret_comp = f > a;
+    ret_comp = f <= a;
+    ret_comp = f >= a;
+    ret_comp = f == a;
+    ret_comp = f != a;
 
     g = a + f;
     g = a - f;
     g = a * f;
     g = a / f;
-    g = a < f;
-    g = a > f;
-    g = a <= f;
-    g = a >= f;
-    g = a == f;
-    g = a != f;
+    ret_comp = a < f;
+    ret_comp = a > f;
+    ret_comp = a <= f;
+    ret_comp = a >= f;
+    ret_comp = a == f;
+    ret_comp = a != f;
 
     std::cout << "end of test_primitive_mp_float\n\n";
 }
@@ -189,6 +191,7 @@ void test_integer(){
         std::vector<int>
     > integer;
     integer a(1), f(a + a), g;
+    bool ret_comp;
 
     std::cout << "start test_integer\n";
 
@@ -196,45 +199,45 @@ void test_integer(){
     g = 1 - a;
     g = 1 * a;
     g = 1 / a;
-    g = 1 < a;
-    g = 1 > a;
-    g = 1 <= a;
-    g = 1 >= a;
-    g = 1 == a;
-    g = 1 != a;
+    ret_comp = 1 < a;
+    ret_comp = 1 > a;
+    ret_comp = 1 <= a;
+    ret_comp = 1 >= a;
+    ret_comp = 1 == a;
+    ret_comp = 1 != a;
 
     g = a + 1;
     g = a - 1;
     g = a * 1;
     g = a / 1;
-    g = a < 1;
-    g = a > 1;
-    g = a <= 1;
-    g = a >= 1;
-    g = a == 1;
-    g = a != 1;
+    ret_comp = a < 1;
+    ret_comp = a > 1;
+    ret_comp = a <= 1;
+    ret_comp = a >= 1;
+    ret_comp = a == 1;
+    ret_comp = a != 1;
 
     g = f + a;
     g = f - a;
     g = f * a;
     g = f / a;
-    g = f < a;
-    g = f > a;
-    g = f <= a;
-    g = f >= a;
-    g = f == a;
-    g = f != a;
+    ret_comp = f < a;
+    ret_comp = f > a;
+    ret_comp = f <= a;
+    ret_comp = f >= a;
+    ret_comp = f == a;
+    ret_comp = f != a;
 
     g = a + f;
     g = a - f;
     g = a * f;
     g = a / f;
-    g = a < f;
-    g = a > f;
-    g = a <= f;
-    g = a >= f;
-    g = a == f;
-    g = a != f;
+    ret_comp = a < f;
+    ret_comp = a > f;
+    ret_comp = a <= f;
+    ret_comp = a >= f;
+    ret_comp = a == f;
+    ret_comp = a != f;
 
     std::cout << "end of test_integer\n\n";
 }
