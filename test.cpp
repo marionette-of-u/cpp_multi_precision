@@ -226,8 +226,10 @@ void test_modular(){
     modular a(4, 5), f(a + a), g;
     bool ret_comp;
 
-    f.normalize();
+    f.force_normalize();
     std::cout << f.to_string() << std::endl;
+
+    modular::pow(g, a, f);
 
     g = 1 + a;
     g = 1 - a;

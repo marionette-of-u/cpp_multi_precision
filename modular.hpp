@@ -1,6 +1,7 @@
 #ifndef HPP_CPP_MULTI_PRECISION_MODULAR
 #define HPP_CPP_MULTI_PRECISION_MODULAR
 
+#include <sstream>
 #include "ns_aux.hpp"
 
 namespace cpp_multi_precision{
@@ -36,17 +37,17 @@ namespace cpp_multi_precision{
     public:
         std::string to_string() const{
             std::string r;
-            r += aux::to_string_dispatch(value_);
+            r += to_string_dispatch(value_);
             r += " mod ";
-            r += aux::to_string_dispatch(modulus_);
+            r += to_string_dispatch(modulus_);
             return r;
         }
 
         std::wstring to_wstring() const{
             std::wstring r;
-            r += aux::to_wstring_dispatch(value_);
+            r += to_wstring_dispatch(value_);
             r += L" mod ";
-            r += aux::to_wstring_dispatch(modulus_);
+            r += to_wstring_dispatch(modulus_);
             return r;
         }
 
@@ -54,6 +55,18 @@ namespace cpp_multi_precision{
             if(value_ >= modulus_1_5_){
                 force_normalize();
             }
+        }
+
+        void force_normalize(){
+            value_ = std::move(value_ % modulus_);
+        }
+
+    public:
+        static modular &pow(modular &result, const modular &x, const modular &y){
+            pow_dispatch(result, x, y);
+            result.set_modulus(x.modulus_);
+            result.normalize();
+            return result;
         }
 
     public:
@@ -283,16 +296,77 @@ namespace cpp_multi_precision{
         }
 
     private:
+        void set_modulus(const value_type &value){
+            modulus_ = value;;
+        }
+
         void set_modulus_1_5(){
             modulus_1_5_ = modulus_;
             modulus_1_5_ += modulus_ / 2;
         }
 
-        void force_normalize(){
-            value_ = std::move(value_ % modulus_);
+    private:
+#define CPP_MULTI_PRECISION_SIGUNATURE_TO_STRING template<class T, std::string (T::*Func)() const>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_string, CPP_MULTI_PRECISION_SIGUNATURE_TO_STRING);
+        template<class T>
+        static std::string to_string_dispatch(const T &value, typename boost::enable_if<has_to_string<T>>::type* = 0){
+            return value.to_string();
         }
 
-    private:
+        template<class T>
+        static std::string to_string_dispatch(const T &value, typename boost::disable_if<has_to_string<T>>::type* = 0){
+            std::ostringstream os;
+            os << value;
+            return os.str();
+        }
+
+#define CPP_MULTI_PRECISION_SIGUNATURE_TO_WSTRING template<class T, std::wstring (T::*Func)() const>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_wstring, CPP_MULTI_PRECISION_SIGUNATURE_TO_WSTRING);
+        template<class T>
+        static std::wstring to_wstring_dispatch(const T &value, typename boost::enable_if<has_to_string<T>>::type* = 0){
+            return value.to_wstring();
+        }
+
+        template<class T>
+        static std::wstring to_wstring_dispatch(const T &value, typename boost::disable_if<has_to_string<T>>::type* = 0){
+            std::wostringstream os;
+            os << value;
+            return os.str();
+        }
+
+#define CPP_MULTI_PRECISION_SIGNATURE_POW template<class T, T &(*Func)(T&, const T&, const T&)>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(pow, CPP_MULTI_PRECISION_SIGNATURE_POW);
+        template<class T>
+        static T &pow_dispatch(
+            T &result,
+            const T &x,
+            const T &y,
+            typename boost::enable_if<has_pow<typename T::value_type>>::type* = 0
+        ){
+            T::value_type::pow(result.value_, x.value_, y.value_);
+            return result;
+        }
+
+        template<class T>
+        static T &pow_dispatch(
+            T &result,
+            const T &x,
+            const T &y,
+            typename boost::disable_if<has_pow<typename T::value_type>>::type* = 0
+        ){
+            std::size_t k = sizeof(T) * 8;
+            result.value_ = x.value_;
+            for(std::size_t i = 0; i < k; ++i){
+                std::size_t j = k - i - 1;
+                if(((y.value_ >> j) & 1) == 1){
+                    result.value_ = (result.value_ * result.value_ * x.value_) % x.modulus_;
+                }else{
+                    result.value_ = (result.value_ * result.value_) % x.modulus_;
+                }
+            }
+            return result;
+        }
+
         value_type value_, modulus_, modulus_1_5_;
     };
 
