@@ -576,8 +576,8 @@ namespace cpp_multi_precision{
             }
         }
 
-        template<class Type, class Multi>
-        static Type &pow_impl(Type &result, const Type &x, const Type &y, Multi multi){
+        template<bool InModular, class Type, class Multi>
+        static Type &pow_impl(Type &result, const Type &x, const Type &y, Multi multi, const Type &mod = 0){
             result.assign(x);
             typename container_type::const_reverse_iterator y_iter = y.container.rbegin(); 
             {
@@ -593,6 +593,7 @@ namespace cpp_multi_precision{
                     if(((n_y >> m) & 1) == 1){
                         Type w(result);
                         multi(result, w, x);
+                        if(InModular){ result = result % mod; }
                     }
                 }
             }
@@ -606,6 +607,7 @@ namespace cpp_multi_precision{
                     if(((n_y >> m) & 1) == 1){
                         Type w(result);
                         multi(result, w, x);
+                        if(InModular){ result = result % mod; }
                     }
                 }
             }

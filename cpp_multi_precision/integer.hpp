@@ -362,7 +362,24 @@ namespace cpp_multi_precision{
         static integer &pow(integer &result, const integer &x, const integer &y){
             if(y.sign == true){
                 if(y == 0){ result.assign(1); }else{
-                    unsigned_integer_type::pow_impl(result, x, y, kar_multi);
+                    unsigned_integer_type::template pow_impl<false>(result, x, y, kar_multi);
+                    if(!x.sign && (x.container[0] & 1) == 0){
+                        result.sign = true;
+                    }
+                }
+            }else{
+                result.assign(0);
+            }
+            return result;
+        }
+
+        static integer &pow_mod(integer &result, const integer &x, const integer &y, const integer &m){
+            if(y.sign == true){
+                if(y == 0){ result.assign(1); }else{
+                    unsigned_integer_type::template pow_impl<true>(result, x, y, kar_multi, m);
+                    if(!x.sign && (x.container[0] & 1) == 0){
+                        result.sign = true;
+                    }
                 }
             }else{
                 result.assign(0);

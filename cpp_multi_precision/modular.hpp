@@ -306,8 +306,8 @@ namespace cpp_multi_precision{
         }
 
     private:
-#define CPP_MULTI_PRECISION_SIGUNATURE_TO_STRING template<class T, std::string (T::*Func)() const>
-        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_string, CPP_MULTI_PRECISION_SIGUNATURE_TO_STRING);
+#define CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_STRING template<class T, std::string (T::*Func)() const>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_string, CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_STRING);
         template<class T>
         static std::string to_string_dispatch(const T &value, typename boost::enable_if<has_to_string<T>>::type* = 0){
             return value.to_string();
@@ -320,8 +320,8 @@ namespace cpp_multi_precision{
             return os.str();
         }
 
-#define CPP_MULTI_PRECISION_SIGUNATURE_TO_WSTRING template<class T, std::wstring (T::*Func)() const>
-        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_wstring, CPP_MULTI_PRECISION_SIGUNATURE_TO_WSTRING);
+#define CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_WSTRING template<class T, std::wstring (T::*Func)() const>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_wstring, CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_WSTRING);
         template<class T>
         static std::wstring to_wstring_dispatch(const T &value, typename boost::enable_if<has_to_string<T>>::type* = 0){
             return value.to_wstring();
@@ -334,16 +334,16 @@ namespace cpp_multi_precision{
             return os.str();
         }
 
-#define CPP_MULTI_PRECISION_SIGNATURE_POW template<class T, T &(*Func)(T&, const T&, const T&)>
-        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(pow, CPP_MULTI_PRECISION_SIGNATURE_POW);
+#define CPP_MULTI_PRECISION_SIGNATURE_MODULAR_POW template<class T, T &(*Func)(T&, const T&, const T&, const T&)>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(pow_mod, CPP_MULTI_PRECISION_SIGNATURE_MODULAR_POW);
         template<class T>
         static T &pow_dispatch(
             T &result,
             const T &x,
             const T &y,
-            typename boost::enable_if<has_pow<typename T::value_type>>::type* = 0
+            typename boost::enable_if<has_pow_mod<typename T::value_type>>::type* = 0
         ){
-            T::value_type::pow(result.value_, x.value_, y.value_);
+            T::value_type::pow_mod(result.value_, x.value_, y.value_, x.modulus_);
             return result;
         }
 
@@ -352,7 +352,7 @@ namespace cpp_multi_precision{
             T &result,
             const T &x,
             const T &y,
-            typename boost::disable_if<has_pow<typename T::value_type>>::type* = 0
+            typename boost::disable_if<has_pow_mod<typename T::value_type>>::type* = 0
         ){
             std::size_t k = sizeof(T) * 8;
             result.value_ = x.value_;
