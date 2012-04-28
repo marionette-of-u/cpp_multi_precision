@@ -1,1 +1,13 @@
+概要 - STLで多倍精度演算
+- cpp_multi_precision/integer.hpp
+  整数
+
+- rational
+  有理数
+
+- sparse_poly
+  疎な一変数多項式
+
 使い方 - test.cpp参照
+
+動作確認 - clang 3.2, msvc 10.0
