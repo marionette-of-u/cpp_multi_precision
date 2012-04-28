@@ -2,12 +2,17 @@
 - cpp_multi_precision/integer.hpp
   整数
 
-- rational
+- cpp_multi_precision/rational.hpp
   有理数
 
-- sparse_poly
+- cpp_multi_precision/sparse_poly.hpp
   疎な一変数多項式
 
-使い方 - test.cpp参照
+- cpp_multi_precision/primitive_mp_float.hpp
+  primitiveな浮動小数点数
+
+使い方
+- test.cpp参照
+- 基本includeするだけで使えます
 
 動作確認 - clang 3.2, msvc 10.0
