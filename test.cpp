@@ -226,6 +226,9 @@ void test_modular(){
     modular a(4, 5), f(a + a), g;
     bool ret_comp;
 
+    f.normalize();
+    std::cout << f.to_string() << std::endl;
+
     g = 1 + a;
     g = 1 - a;
     g = 1 * a;

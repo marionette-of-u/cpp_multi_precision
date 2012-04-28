@@ -1,6 +1,8 @@
 #ifndef HPP_CPP_MULTI_PRECISION_MODULAR
 #define HPP_CPP_MULTI_PRECISION_MODULAR
 
+#include "ns_aux.hpp"
+
 namespace cpp_multi_precision{
     template<class ValueType>
     class modular{
@@ -30,6 +32,29 @@ namespace cpp_multi_precision{
         modular(modular &&other) :
             value_(std::move(other.value_)), modulus_(std::move(other.modulus_)), modulus_1_5_(std::move(other.modulus_1_5_))
         { normalize(); }
+
+    public:
+        std::string to_string() const{
+            std::string r;
+            r += aux::to_string_dispatch(value_);
+            r += " mod ";
+            r += aux::to_string_dispatch(modulus_);
+            return r;
+        }
+
+        std::wstring to_wstring() const{
+            std::wstring r;
+            r += aux::to_wstring_dispatch(value_);
+            r += L" mod ";
+            r += aux::to_wstring_dispatch(modulus_);
+            return r;
+        }
+
+        void normalize(){
+            if(value_ >= modulus_1_5_){
+                force_normalize();
+            }
+        }
 
     public:
         modular &operator =(const modular &other){
@@ -265,12 +290,6 @@ namespace cpp_multi_precision{
 
         void force_normalize(){
             value_ = std::move(value_ % modulus_);
-        }
-
-        void normalize(){
-            if(value_ >= modulus_1_5_){
-                force_normalize();
-            }
         }
 
     private:

@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <cmath>
 #include <cassert>
+#include <sstream>
 #include <boost/utility/enable_if.hpp>
 #include <boost/random.hpp>
 
@@ -288,6 +289,34 @@ namespace cpp_multi_precision{
             static no check(...); \
         public: \
             BOOST_STATIC_CONSTANT(bool, value = sizeof(check<Type>(0)) == sizeof(yes)); \
+        }
+
+#define CPP_MULTI_PRECISION_AUX_SIGUNATURE_TO_STRING template<class T, std::string (T::*Func)() const>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_string, CPP_MULTI_PRECISION_AUX_SIGUNATURE_TO_STRING);
+        template<class T>
+        std::string to_string_dispatch(const T &value, typename boost::enable_if<has_to_string<T>>::type* = 0){
+            return value.to_string();
+        }
+
+        template<class T>
+        std::string to_string_dispatch(const T &value, typename boost::disable_if<has_to_string<T>>::type* = 0){
+            std::ostringstream os;
+            os << value;
+            return os.str();
+        }
+
+#define CPP_MULTI_PRECISION_AUX_SIGUNATURE_TO_WSTRING template<class T, std::wstring (T::*Func)() const>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_wstring, CPP_MULTI_PRECISION_AUX_SIGUNATURE_TO_WSTRING);
+        template<class T>
+        std::wstring to_wstring_dispatch(const T &value, typename boost::enable_if<has_to_string<T>>::type* = 0){
+            return value.to_wstring();
+        }
+
+        template<class T>
+        std::wstring to_wstring_dispatch(const T &value, typename boost::disable_if<has_to_string<T>>::type* = 0){
+            std::wostringstream os;
+            os << value;
+            return os.str();
         }
 
 #define CPP_MULTI_PRECISION_AUX_SIGNATURE_RESERVE template<class T, void (T::*Func)(typename T::size_type)>
