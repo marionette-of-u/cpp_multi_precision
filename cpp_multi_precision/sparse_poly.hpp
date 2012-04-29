@@ -181,6 +181,16 @@ namespace cpp_multi_precision{
             return *this;
         }
 
+        const sparse_poly &operator +() const{
+            return *this;
+        }
+
+        sparse_poly operator -() const{
+            sparse_poly r;
+            r.sub_iterator(container.begin(), container.end());
+            return std::move(r);
+        }
+
         sparse_poly &operator +=(const sparse_poly &rhs){
             add_order_n(rhs, 0);
             return *this;
@@ -234,18 +244,6 @@ namespace cpp_multi_precision{
         sparse_poly &operator %=(const sparse_poly &rhs){
             assign(*this % rhs);
             return *this;
-        }
-
-        sparse_poly &operator +(){
-            return *this;
-        }
-
-        sparse_poly operator -() const{
-            sparse_poly r(*this);
-            for(typename container_type::iterator iter = r.container.begin(), end = r.container.end(); iter != end; ++iter){
-                iter->second = -iter->second;
-            }
-            return std::move(r);
         }
 
         coefficient_proxy operator [](const order_type &order){
