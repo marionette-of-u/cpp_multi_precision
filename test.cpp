@@ -234,7 +234,7 @@ void test_modular(){
 
     std::cout << f + -f << std::endl;
 
-    modular::pow(g, a, f);
+    std::cout << modular::pow(g, a, f) << std::endl;
 
     g = 1 + a;
     g = 1 - a;
