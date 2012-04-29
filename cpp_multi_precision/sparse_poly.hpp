@@ -225,6 +225,17 @@ namespace cpp_multi_precision{
             return *this;
         }
 
+        sparse_poly operator %(const sparse_poly &rhs) const{
+            sparse_poly r, rem;
+            monic_div(r, rem, *this, rhs);
+            return std::move(rem);
+        }
+
+        sparse_poly &operator %=(const sparse_poly &rhs){
+            assign(*this % rhs);
+            return *this;
+        }
+
         sparse_poly &operator +(){
             return *this;
         }

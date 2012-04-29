@@ -169,10 +169,12 @@ void test_integer(){
         unsigned long long,
         std::vector<int>
     > integer;
-    integer a(1), f(a + a), g;
+    integer a(2), f(a + a), g;
     bool ret_comp;
 
     std::cout << "start test_integer\n";
+
+    integer::pow(g, a, f);
 
     g = 1 + a;
     g = 1 - a;
@@ -219,6 +221,7 @@ void test_modular(){
         std::vector<int>
     > integer;
     
+    // typedef cpp_multi_precision::modular<int> modular; // こっちも使えます
     typedef cpp_multi_precision::modular<integer> modular;
 
     std::cout << "start test_modular\n";
@@ -229,16 +232,14 @@ void test_modular(){
     f.force_normalize();
     std::cout << f.to_string() << std::endl;
 
+    std::cout << f + -f << std::endl;
+
     modular::pow(g, a, f);
 
     g = 1 + a;
     g = 1 - a;
     g = 1 * a;
     g = 1 / a;
-    ret_comp = 1 < a;
-    ret_comp = 1 > a;
-    ret_comp = 1 <= a;
-    ret_comp = 1 >= a;
     ret_comp = 1 == a;
     ret_comp = 1 != a;
 
@@ -246,10 +247,6 @@ void test_modular(){
     g = a - 1;
     g = a * 1;
     g = a / 1;
-    ret_comp = a < 1;
-    ret_comp = a > 1;
-    ret_comp = a <= 1;
-    ret_comp = a >= 1;
     ret_comp = a == 1;
     ret_comp = a != 1;
 
@@ -257,10 +254,6 @@ void test_modular(){
     g = f - a;
     g = f * a;
     g = f / a;
-    ret_comp = f < a;
-    ret_comp = f > a;
-    ret_comp = f <= a;
-    ret_comp = f >= a;
     ret_comp = f == a;
     ret_comp = f != a;
 

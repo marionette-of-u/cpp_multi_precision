@@ -2,6 +2,7 @@
 #define HPP_CPP_MULTI_PRECISION_MODULAR
 
 #include <sstream>
+#include <functional>
 #include "ns_aux.hpp"
 
 namespace cpp_multi_precision{
@@ -22,6 +23,7 @@ namespace cpp_multi_precision{
         modular(const value_type &other_value, const value_type &other_modulus) :
             value_(other_value), modulus_(other_modulus)
         {
+            normalize_modulus();
             set_modulus_1_5();
             normalize();
         }
@@ -52,19 +54,22 @@ namespace cpp_multi_precision{
         }
 
         void normalize(){
+            normalize_sign();
             if(value_ >= modulus_1_5_){
                 force_normalize();
             }
         }
 
         void force_normalize(){
-            value_ = std::move(value_ % modulus_);
+            value_ = value_ % modulus_;
         }
 
-    public:
         static modular &pow(modular &result, const modular &x, const modular &y){
-            pow_dispatch(result, x, y);
-            result.set_modulus(x.modulus_);
+            modular x_(x), y_(y);
+            x_.force_normalize();
+            y_.force_normalize();
+            pow_dispatch(result, x_, y_);
+            result.set_modulus(x_.modulus_);
             result.normalize();
             return result;
         }
@@ -204,86 +209,56 @@ namespace cpp_multi_precision{
             return std::move(r);
         }
 
-        modular &operator <<=(const std::size_t n){
-            value_ <<= n;
-            normalize();
-            return *this;
-        }
-
-        modular operator <<(const std::size_t n) const{
+        modular operator +() const{
             modular r(*this);
-            r <<= n;
+            r.inverse_sign();
             return std::move(r);
-        }
-
-        modular &operator >>=(const std::size_t n){
-            value_ >>= n;
-            normalize();
-            return *this;
-        }
-
-        modular operator >>(const std::size_t n) const{
-            modular r(*this);
-            r >>= n;
-            return std::move(r);
-        }
-
-        modular &operator +(){
-            return *this;
         }
 
         modular operator -() const{
             modular r(*this);
-            r.value_ = std::move(-r.value_);
+            r.force_normalize();
+            if(r.value_ > 0){
+                r.value_ = r.modulus_ - r.value_;
+            }else if(r.value_ < 0){
+                r.value_ = -(r.modulus_ + r.value_);
+            }
             return std::move(r);
         }
 
-        bool operator <(const modular &rhs) const{
-            return value_ < rhs.value_;
-        }
-
-        bool operator <(const value_type &rhs) const{
-            return value_ < rhs;
-        }
-
-        bool operator >(const modular &rhs) const{
-            return value_ > rhs.value_;
-        }
-
-        bool operator >(const value_type &rhs) const{
-            return value_ > rhs;
-        }
-
-        bool operator <=(const modular &rhs) const{
-            return value_ <= rhs.value_;
-        }
-
-        bool operator <=(const value_type &rhs) const{
-            return value_ <= rhs;
-        }
-
-        bool operator >=(const modular &rhs) const{
-            return value_ >= rhs.value_;
-        }
-
-        bool operator >=(const value_type &rhs) const{
-            return value_ >= rhs;
-        }
-
         bool operator ==(const modular &rhs) const{
-            return value_ == rhs.value_;
+            if(modulus_ != rhs.modulus_){
+                return false;
+            }
+            modular rhs_(rhs), lhs_(*this);
+            lhs_.force_normalize();
+            rhs_.force_normalize();
+            if(lhs_.value_ == rhs_.value_){
+                return true;
+            }else{
+                rhs_.inverse_sign();
+                if(lhs_.value_ == rhs_.value_){
+                    return true;
+                }
+            }
+            return false;
         }
 
         bool operator ==(const value_type &rhs) const{
-            return value_ == rhs;
+            if(value_ == rhs){
+                return true;
+            }else if(value_ == -rhs){
+                return true;
+            }
+            return false;
         }
 
         bool operator !=(const modular &rhs) const{
-            return value_ != rhs.value_;
+            return !operator ==(rhs);
         }
 
         bool operator !=(const value_type &rhs) const{
-            return value_ != rhs;
+            return !operator ==(rhs);
         }
 
     public:
@@ -291,13 +266,30 @@ namespace cpp_multi_precision{
             return value_;
         }
 
-        const value_type  &modulus() const{
+        const value_type &modulus() const{
             return modulus_;
         }
 
     private:
-        void set_modulus(const value_type &value){
-            modulus_ = value;;
+        void inverse_sign(){
+            value_ = -value_;
+        }
+
+        void normalize_sign(){
+            if(value_ < 0){
+                value_ = std::move(-value_);
+            }
+        }
+
+        void normalize_modulus(){
+            if(modulus_ < 0){
+                modulus_ = std::move(-modulus_);
+            }
+        }
+
+        void set_modulus(const value_type &x){
+            modulus_ = x;
+            set_modulus_1_5();
         }
 
         void set_modulus_1_5(){
@@ -305,7 +297,6 @@ namespace cpp_multi_precision{
             modulus_1_5_ += modulus_ / 2;
         }
 
-    private:
 #define CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_STRING template<class T, std::string (T::*Func)() const>
         CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_string, CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_STRING);
         template<class T>
@@ -367,6 +358,7 @@ namespace cpp_multi_precision{
             return result;
         }
 
+    private:
         value_type value_, modulus_, modulus_1_5_;
     };
 
@@ -406,26 +398,6 @@ namespace cpp_multi_precision{
     }
 
     template<class ValueType>
-    bool operator <(const typename modular<ValueType>::value_type &lhs, const modular<ValueType> &rhs){
-        return lhs < rhs.value();
-    }
-
-    template<class ValueType>
-    bool operator >(const typename modular<ValueType>::value_type &lhs, const modular<ValueType> &rhs){
-        return lhs > rhs.value();
-    }
-
-    template<class ValueType>
-    bool operator <=(const typename modular<ValueType>::value_type &lhs, const modular<ValueType> &rhs){
-        return lhs <= rhs.value();
-    }
-
-    template<class ValueType>
-    bool operator >=(const typename modular<ValueType>::value_type &lhs, const modular<ValueType> &rhs){
-        return lhs >= rhs.value();
-    }
-
-    template<class ValueType>
     bool operator ==(const typename modular<ValueType>::value_type &lhs, const modular<ValueType> &rhs){
         return lhs == rhs.value();
     }
@@ -433,6 +405,13 @@ namespace cpp_multi_precision{
     template<class ValueType>
     bool operator !=(const typename modular<ValueType>::value_type &lhs, const modular<ValueType> &rhs){
         return lhs != rhs.value();
+    }
+
+    template<class ValueType>
+    std::ostream &operator <<(std::ostream &ostream, modular<ValueType> value){
+        value.force_normalize();
+        ostream << value.to_string();
+        return ostream;
     }
 }
 
