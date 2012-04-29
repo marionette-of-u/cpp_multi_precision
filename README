@@ -1,15 +1,24 @@
 概要 - STLで多倍精度演算
 - cpp_multi_precision/integer.hpp
-  整数
+  整数.
 
 - cpp_multi_precision/rational.hpp
-  有理数
+  有理数.
 
 - cpp_multi_precision/sparse_poly.hpp
-  疎な一変数多項式
+  疎な一変数多項式.
 
 - cpp_multi_precision/primitive_mp_float.hpp
-  primitiveな浮動小数点数
+  primitiveな浮動小数点数.
+
+- cpp_multi_precision/modular.hpp
+  モジュラ.
+
+- cpp_multi_precision/storaged_container.hpp
+  スタック領域にメモリ空間を持つSTL準拠のコンテナ群.
+  但し今の所vectorのみ.
+  他の多倍精度演算をする型に組み込んで
+  ヒープ領域ではなくスタック領域で高速に演算する事を目的として作られた.
 
 使い方
 - test.cpp参照
