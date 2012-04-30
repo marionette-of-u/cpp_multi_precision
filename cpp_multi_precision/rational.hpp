@@ -315,6 +315,15 @@ namespace cpp_multi_precision{
         ostream << value.to_string();
         return ostream;
     }
+
+    template<class RadixType, std::size_t RadixLog2, class Radix2Type, class URadix2Type, class Container, class Allocator>
+    std::wostream &operator <<(
+        std::wostream &ostream,
+        const rational<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> &value
+    ){
+        ostream << value.to_wstring();
+        return ostream;
+    }
 }
 
 #endif

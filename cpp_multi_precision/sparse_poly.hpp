@@ -99,7 +99,8 @@ namespace cpp_multi_precision{
                 typename base_type::iterator iter = base_type::find(v.first);
                 if(iter == base_type::end()){ return base_type::end(); }
                 coefficient_type &coe(iter.first->second), lhs(coe);
-                coefficient_type::div(coe, lhs, v.second);
+                // coefficient_type::div(coe, lhs, v.second);
+                coe = lhs / v.second;
                 if(coe == 0){
                     base_type::erase(iter.first);
                     return base_type::end();
@@ -449,8 +450,8 @@ namespace cpp_multi_precision{
                 if(rem_order >= rhs_order){
                     order_type n = rem_order;
                     n -= rhs_order;
-                    coefficient_type q;
-                    coefficient_type::div(q, rem_coe, rhs_coe);
+                    coefficient_type q = rem_coe / rhs_coe;
+                    // coefficient_type::div(q, rem_coe, rhs_coe);
                     if(q == 0){
                         break;
                     }
@@ -502,20 +503,20 @@ namespace cpp_multi_precision{
         static sparse_poly &normal(sparse_poly &result, const sparse_poly &x){
             result.container = x.container;
             const coefficient_type &lc_value(x.lc());
-            coefficient_type temp;
+            // coefficient_type temp;
             for(typename container_type::iterator iter = result.container.begin(), end = result.container.end(); iter != end; ++iter){
-                coefficient_type::div(temp, iter->second, lc_value);
-                iter->second.assign(temp);
+                // coefficient_type::div(temp, iter->second, lc_value);
+                iter->second.assign(iter->second / lc_value);
             }
             return result;
         }
 
         void normalize(){
             if(container.size() == 0){ return; }
-            coefficient_type lc_value(lc()), temp;
+            coefficient_type lc_value(lc())/* , temp */;
             for(typename container_type::iterator iter = container.begin(), end = container.end(); iter != end; ++iter){
-                coefficient_type::div(temp, iter->second, lc_value);
-                iter->second.assign(temp);
+                // coefficient_type::div(temp, iter->second, lc_value);
+                iter->second.assign(iter->second / lc_value);
             }
         }
 
@@ -562,7 +563,10 @@ namespace cpp_multi_precision{
 
         template<class Variable>
         std::string to_string(const Variable &v) const{
-            return to_string_impl<std::string, char, Variable>(v, &order_type::to_string, &coefficient_type::to_string, '*', '^', '+', '-', '0');
+            return to_string_impl<std::string, char, Variable, std::ostringstream>(
+                v,
+                '*', '^', '+', '-', '0', '(', ')'
+            );
         }
 
         std::string to_string() const{
@@ -571,7 +575,10 @@ namespace cpp_multi_precision{
 
         template<class Variable>
         std::wstring to_wstring(const Variable &v) const{
-            return to_string_impl<std::wstring, wchar_t, Variable>(v, &order_type::to_wstring, &coefficient_type::to_wstring, L'*', L'^', L'+', L'-', L'0');
+            return to_string_impl<std::wstring, wchar_t, Variable, std::wostringstream>(
+                v,
+                L'*', L'^', L'+', L'-', L'0', L'(', L')'
+            );
         }
 
         std::wstring to_wstring() const{
@@ -974,8 +981,17 @@ namespace cpp_multi_precision{
             }
         }
 
-        template<class Str, class Char, class Variable, class OrderToString, class CoeToString>
-        Str to_string_impl(const Variable &v, OrderToString order_to_string, CoeToString coe_to_string, Char multi, Char pow, Char plus, Char mn, Char zero) const{
+        template<class Str, class Char, class Variable, class OStringStream>
+        Str to_string_impl(
+            const Variable &v,
+            Char multi,
+            Char pow,
+            Char plus,
+            Char mn,
+            Char zero,
+            Char l_pare,
+            Char r_pare
+        ) const{
             Str result;
             if(container.size() == 0){ result += zero; return std::move(result); }
             typename container_type::const_reverse_iterator first = container.rbegin();
@@ -983,22 +999,39 @@ namespace cpp_multi_precision{
                 const order_type &order(iter->first);
                 const coefficient_type &coe(iter->second);
                 if(coe == 0){ continue; }
-                if(first != iter){
-                    if(coe.sign){ result += plus; }
+                if(first != iter && coe > 0){
+                    result += plus;
                 }
-                bool flag_coe = !(coe == 1), flag_order = !(order == 0);
-                if(flag_coe){
-                    result += (coe.*coe_to_string)();
-                    if(!(order == 0)){ result += multi; }
+                if(coe == 1){
+                    if(order == 0){
+                        OStringStream ostringstream;
+                        ostringstream << coe;
+                        result += ostringstream.str();
+                    }
+                }else if(coe == -1){
+                    if(order == 0){
+                        OStringStream ostringstream;
+                        ostringstream << coe;
+                        result += ostringstream.str();
+                    }else{
+                        result += mn;
+                    }
+                }else if(coe > 0 || coe < 0){
+                    OStringStream ostringstream;
+                    ostringstream << coe;
+                    result += ostringstream.str();
                 }
-                if(flag_order){
+                if(order != 0){
                     result += v;
-                    if(!(order == 1)){
+                    if(order != 1){
                         result += pow;
-                        result += (order.*order_to_string)();
+                        if(order < 0){ result += l_pare; }
+                        OStringStream ostringstream;
+                        ostringstream << order;
+                        result += ostringstream.str();
+                        if(order < 0){ result += r_pare; }
                     }
                 }
-                if(!flag_coe && !flag_order){ result += (coe.*coe_to_string)(); }
             }
             return std::move(result);
         }
@@ -1084,6 +1117,15 @@ namespace cpp_multi_precision{
         const sparse_poly<OrderType, CoefficientType, Alloc> &value
     ){
         ostream << value.to_string();
+        return ostream;
+    }
+
+    template<class OrderType, class CoefficientType, class Alloc>
+    std::wostream &operator <<(
+        std::wostream &ostream,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &value
+    ){
+        ostream << value.to_wstring();
         return ostream;
     }
 }

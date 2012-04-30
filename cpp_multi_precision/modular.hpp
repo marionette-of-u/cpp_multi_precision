@@ -38,17 +38,33 @@ namespace cpp_multi_precision{
     public:
         std::string to_string() const{
             std::string r;
-            r += to_string_dispatch(value_);
+            {
+                std::ostringstream os;
+                os << value_;
+                r += os.str();
+            }
             r += " mod ";
-            r += to_string_dispatch(modulus_);
+            {
+                std::ostringstream os;
+                os << modulus_;
+                r += os.str();
+            }
             return r;
         }
 
         std::wstring to_wstring() const{
             std::wstring r;
-            r += to_wstring_dispatch(value_);
+            {
+                std::wostringstream os;
+                os << value_;
+                r += os.str();
+            }
             r += L" mod ";
-            r += to_wstring_dispatch(modulus_);
+            {
+                std::wostringstream os;
+                os << modulus_;
+                r += os.str();
+            }
             return r;
         }
 
@@ -283,29 +299,15 @@ namespace cpp_multi_precision{
             modulus_1_5_ += modulus_ / 2;
         }
 
-#define CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_STRING template<class T, std::string (T::*Func)() const>
-        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_string, CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_STRING);
-        template<class T>
-        static std::string to_string_dispatch(const T &value, typename boost::enable_if<has_to_string<T>>::type* = 0){
-            return value.to_string();
-        }
-
-        template<class T>
-        static std::string to_string_dispatch(const T &value, typename boost::disable_if<has_to_string<T>>::type* = 0){
-            std::ostringstream os;
-            os << value;
-            return os.str();
-        }
-
 #define CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_WSTRING template<class T, std::wstring (T::*Func)() const>
         CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_wstring, CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_WSTRING);
         template<class T>
-        static std::wstring to_wstring_dispatch(const T &value, typename boost::enable_if<has_to_string<T>>::type* = 0){
+        static std::wstring to_wstring_dispatch(const T &value, typename boost::enable_if<has_to_wstring<T>>::type* = 0){
             return value.to_wstring();
         }
 
         template<class T>
-        static std::wstring to_wstring_dispatch(const T &value, typename boost::disable_if<has_to_string<T>>::type* = 0){
+        static std::wstring to_wstring_dispatch(const T &value, typename boost::disable_if<has_to_wstring<T>>::type* = 0){
             std::wostringstream os;
             os << value;
             return os.str();
@@ -397,6 +399,13 @@ namespace cpp_multi_precision{
     std::ostream &operator <<(std::ostream &ostream, modular<ValueType> value){
         value.force_normalize();
         ostream << value.to_string();
+        return ostream;
+    }
+
+    template<class ValueType>
+    std::wostream &operator <<(std::wostream &ostream, modular<ValueType> value){
+        value.force_normalize();
+        ostream << value.to_wstring();
         return ostream;
     }
 }

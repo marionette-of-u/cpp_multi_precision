@@ -8,9 +8,6 @@
 - cpp_multi_precision/sparse_poly.hpp
   疎な一変数多項式.
 
-- cpp_multi_precision/primitive_mp_float.hpp
-  primitiveな浮動小数点数.
-
 - cpp_multi_precision/modular.hpp
   モジュラ.
 

@@ -1,9 +1,10 @@
 ﻿#include <iostream>
 #include <complex>
+#include <cmath>
+#include <vector>
 #include "cpp_multi_precision/modular.hpp"
 #include "cpp_multi_precision/sparse_poly.hpp"
 #include "cpp_multi_precision/rational.hpp"
-#include "cpp_multi_precision/primitive_mp_float.hpp"
 #include "cpp_multi_precision/integer.hpp"
 
 int test_sparse_poly(){
@@ -146,55 +147,6 @@ void test_rational(){
     ret_comp = f != a;
 
     std::cout << "end of test_rational\n\n";
-}
-
-void test_primitive_mp_float(){
-    typedef cpp_multi_precision::primitive_mp_float<
-        unsigned int,
-        sizeof(unsigned int) * 8,
-        long long,
-        unsigned long long,
-        std::vector<int>
-    > floating_point;
-    floating_point a(10.0), f(a + a), g;
-    bool ret_comp;
-
-    std::cout << "start test_primitive_mp_float\n";
-
-    g = 1 + a;
-    g = 1 - a;
-    g = 1 * a;
-    g = 1 / a;
-    ret_comp = 1 < a;
-    ret_comp = 1 > a;
-    ret_comp = 1 <= a;
-    ret_comp = 1 >= a;
-    ret_comp = 1 == a;
-    ret_comp = 1 != a;
-
-    g = a + 1;
-    g = a - 1;
-    g = a * 1;
-    g = a / 1;
-    ret_comp = a < 1;
-    ret_comp = a > 1;
-    ret_comp = a <= 1;
-    ret_comp = a >= 1;
-    ret_comp = a == 1;
-    ret_comp = a != 1;
-
-    g = f + a;
-    g = f - a;
-    g = f * a;
-    g = f / a;
-    ret_comp = f < a;
-    ret_comp = f > a;
-    ret_comp = f <= a;
-    ret_comp = f >= a;
-    ret_comp = f == a;
-    ret_comp = f != a;
-
-    std::cout << "end of test_primitive_mp_float\n\n";
 }
 
 void test_integer(){
@@ -346,7 +298,6 @@ int main(){
     test_modular();
     test_sparse_poly();
     test_rational();
-    test_primitive_mp_float();
     test_integer();
     test_modular_and_poly();
 
