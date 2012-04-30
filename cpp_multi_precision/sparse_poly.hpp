@@ -99,7 +99,6 @@ namespace cpp_multi_precision{
                 typename base_type::iterator iter = base_type::find(v.first);
                 if(iter == base_type::end()){ return base_type::end(); }
                 coefficient_type &coe(iter.first->second), lhs(coe);
-                // coefficient_type::div(coe, lhs, v.second);
                 coe = lhs / v.second;
                 if(coe == 0){
                     base_type::erase(iter.first);
@@ -451,7 +450,6 @@ namespace cpp_multi_precision{
                     order_type n = rem_order;
                     n -= rhs_order;
                     coefficient_type q = rem_coe / rhs_coe;
-                    // coefficient_type::div(q, rem_coe, rhs_coe);
                     if(q == 0){
                         break;
                     }
@@ -503,9 +501,7 @@ namespace cpp_multi_precision{
         static sparse_poly &normal(sparse_poly &result, const sparse_poly &x){
             result.container = x.container;
             const coefficient_type &lc_value(x.lc());
-            // coefficient_type temp;
             for(typename container_type::iterator iter = result.container.begin(), end = result.container.end(); iter != end; ++iter){
-                // coefficient_type::div(temp, iter->second, lc_value);
                 iter->second.assign(iter->second / lc_value);
             }
             return result;
@@ -515,7 +511,6 @@ namespace cpp_multi_precision{
             if(container.size() == 0){ return; }
             coefficient_type lc_value(lc())/* , temp */;
             for(typename container_type::iterator iter = container.begin(), end = container.end(); iter != end; ++iter){
-                // coefficient_type::div(temp, iter->second, lc_value);
                 iter->second.assign(iter->second / lc_value);
             }
         }
