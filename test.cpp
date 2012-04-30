@@ -58,6 +58,42 @@ int test_sparse_poly(){
     // cl, cr はそれぞれ、 r = a * cl + b * cr となる係数
     std::cout << "r  : " << poly_r << "\ncl : " << poly_cl << "\ncr : " << poly_cr << "\n";
 
+    sparse_poly a(poly_a), f(a + a), g;
+    bool ret_comp;
+
+    g = 1 + a;
+    g = 1 - a;
+    g = 1 * a;
+    g = 1 / a;
+    ret_comp = 1 < a;
+    ret_comp = 1 > a;
+    ret_comp = 1 <= a;
+    ret_comp = 1 >= a;
+    ret_comp = 1 == a;
+    ret_comp = 1 != a;
+
+    g = a + 1;
+    g = a - 1;
+    g = a * 1;
+    g = a / 1;
+    ret_comp = a < 1;
+    ret_comp = a > 1;
+    ret_comp = a <= 1;
+    ret_comp = a >= 1;
+    ret_comp = a == 1;
+    ret_comp = a != 1;
+
+    g = f + a;
+    g = f - a;
+    g = f * a;
+    g = f / a;
+    ret_comp = f < a;
+    ret_comp = f > a;
+    ret_comp = f <= a;
+    ret_comp = f >= a;
+    ret_comp = f == a;
+    ret_comp = f != a;
+
     std::cout << "end of test_sparse_poly\n\n";
 
     return 0;
@@ -230,7 +266,7 @@ void test_modular(){
     bool ret_comp;
 
     f.force_normalize();
-    std::cout << f.to_string() << std::endl;
+    std::cout << f.to_string() << "\n";
 
     std::cout << f + -f << std::endl;
 
@@ -260,6 +296,49 @@ void test_modular(){
     std::cout << "end of test_modular\n\n";
 }
 
+void test_modular_and_poly(){
+    typedef cpp_multi_precision::integer<
+        unsigned int,
+        32,
+        long long,
+        unsigned long long,
+        std::vector<unsigned int>
+    > integer;
+
+    typedef cpp_multi_precision::sparse_poly<integer, integer> sparse_poly;
+    typedef cpp_multi_precision::modular<sparse_poly> modular;
+    
+    std::cout << "start test_modular_and_poly\n";
+
+    sparse_poly a, modulus;
+
+    // modulus = x^2 - x - 1
+    modulus [2](1) [1](-1) [0](-1);
+    std::cout << "modulus = " << modulus << "\n";
+
+    // a = x^3 ≡ 2x + 1 mod modulus
+    a = 0;
+    a [3](1);
+    std::cout << modular(a, modulus) << "\n";
+
+    // a = x^2 + 2x ≡ 3x + 1 mod modulus
+    a = 0;
+    a [2](1) [1](2);
+    std::cout << modular(a, modulus) << "\n";
+
+    // a = 6x^2 + 8x + 2 ≡ 14x + 8 mod modulus
+    a = 0;
+    a [2](6) [1](8) [0](2);
+    std::cout << modular(a, modulus) << "\n";
+
+    // a = 6x^2 + 8x + 2 ≡ 12x + 7 mod modulus
+    a = 0;
+    a [5](1) [4](2) [3](-1) [2](1) [1](2);
+    std::cout << modular(a, modulus) << "\n";
+
+    std::cout << "end of test_modular_and_poly\n\n";
+}
+
 #include <string>
 #include <fstream>
 
@@ -269,6 +348,7 @@ int main(){
     test_rational();
     test_primitive_mp_float();
     test_integer();
+    test_modular_and_poly();
 
     return 0;
 }

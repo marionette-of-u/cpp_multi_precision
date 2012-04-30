@@ -116,6 +116,11 @@ namespace cpp_multi_precision{
         sparse_poly() : container(){}
         sparse_poly(const sparse_poly &other) : container(other.container){}
         sparse_poly(sparse_poly &&other) : container(other.container){}
+        sparse_poly(const coefficient_type &coe) : container(){
+            if(coe != 0){
+                container.insert(typename container_type::value_type(order_type(0), coe));
+            }
+        }
 
     private:
         sparse_poly(const container_type &other_container) : container(other_container){}
@@ -141,7 +146,11 @@ namespace cpp_multi_precision{
             const coefficient_type &get() const{ return *coe; }
             coefficient_proxy(const coefficient_proxy &other) : container(other.container), order(other.order), coe(other.coe){}
             const coefficient_proxy &operator =(const coefficient_type &v) const{
-                container->assign(typename container_type::ref_value_type(order, v));
+                if(v == 0){
+                    container->clear();
+                }else{
+                    container->assign(typename container_type::ref_value_type(order, v));
+                }
                 return *this;
             }
 
@@ -165,12 +174,34 @@ namespace cpp_multi_precision{
                 return *this;
             }
 
+            const coefficient_proxy &operator ()(const coefficient_type &v) const{
+                operator =(v);
+                return *this;
+            }
+
+            coefficient_proxy operator [](const order_type &v) const{
+                coefficient_proxy ret;
+                ret.container = container;
+                ret.order = v;
+                return std::move(ret);
+            }
+
             container_type *container;
             order_type order;
             coefficient_type *coe;
         };
 
     public:
+        sparse_poly &operator =(const coefficient_type &rhs){
+            assign(rhs);
+            return *this;
+        }
+
+        sparse_poly &operator =(const coefficient_type &&rhs){
+            assign(rhs);
+            return *this;
+        }
+
         sparse_poly &operator =(const sparse_poly &rhs){
             assign(rhs);
             return *this;
@@ -196,7 +227,28 @@ namespace cpp_multi_precision{
             return *this;
         }
 
+        sparse_poly &operator +=(const coefficient_type &rhs){
+            if(container.empty()){
+                assign(rhs);
+            }else{
+                typename container_type::iterator iter = container.find(0);
+                if(iter != container.end()){
+                    container.insert(typename container_type::value_type(order_type(0), rhs));
+                }else{
+                    iter->second += rhs;
+                    if(iter->second == 0){ container.erase(iter); }
+                }
+            }
+            return *this;
+        }
+
         sparse_poly operator +(const sparse_poly &rhs) const{
+            sparse_poly result(*this);
+            result += rhs;
+            return std::move(result);
+        }
+
+        sparse_poly operator +(const coefficient_type &rhs){
             sparse_poly result(*this);
             result += rhs;
             return std::move(result);
@@ -207,7 +259,28 @@ namespace cpp_multi_precision{
             return *this;
         }
 
+        sparse_poly &operator -=(const coefficient_type &rhs){
+            if(container.empty()){
+                assign(rhs);
+            }else{
+                typename container_type::iterator iter = container.find(0);
+                if(iter != container.end()){
+                    container.insert(typename container_type::value_type(order_type(0), rhs));
+                }else{
+                    iter->second -= rhs;
+                    if(iter->second == 0){ container.erase(iter); }
+                }
+            }
+            return *this;
+        }
+
         sparse_poly operator -(const sparse_poly &rhs) const{
+            sparse_poly result(*this);
+            result -= rhs;
+            return std::move(result);
+        }
+
+        sparse_poly operator -(const coefficient_type &rhs) const{
             sparse_poly result(*this);
             result -= rhs;
             return std::move(result);
@@ -219,8 +292,29 @@ namespace cpp_multi_precision{
             return std::move(r);
         }
 
+        sparse_poly operator *(const coefficient_type &rhs) const{
+            sparse_poly r(*this);
+            r *= rhs;
+            return std::move(r);
+        }
+
         sparse_poly &operator *=(const sparse_poly &rhs){
             assign(*this * rhs);
+            return *this;
+        }
+
+        sparse_poly &operator *=(const coefficient_type &rhs){
+            if(container.empty()){ return *this; }
+            for(typename container_type::iterator iter = container.begin(); ; ){
+                coefficient_type &coe(iter->second);
+                coe *= rhs;
+                if(coe == 0){
+                    iter = container.erase(iter);
+                }else{
+                    ++iter;
+                }
+                if(iter == container.end()){ break; }
+            }
             return *this;
         }
 
@@ -230,8 +324,29 @@ namespace cpp_multi_precision{
             return std::move(r);
         }
 
+        sparse_poly operator /(const coefficient_type &rhs) const{
+            sparse_poly r(*this);
+            r /= rhs;
+            return std::move(r);
+        }
+
         sparse_poly &operator /=(const sparse_poly &rhs){
             assign(*this / rhs);
+            return *this;
+        }
+
+        sparse_poly &operator /=(const coefficient_type &rhs){
+            if(container.empty()){ return *this; }
+            for(typename container_type::iterator iter = container.begin(); ; ){
+                coefficient_type &coe(iter->second);
+                coe /= rhs;
+                if(coe == 0){
+                    iter = container.erase(iter);
+                }else{
+                    ++iter;
+                }
+                if(iter == container.end()){ break; }
+            }
             return *this;
         }
 
@@ -241,9 +356,68 @@ namespace cpp_multi_precision{
             return std::move(rem);
         }
 
+        sparse_poly operator %(const coefficient_type &rhs) const{
+            sparse_poly r, rem;
+            square_div(r, rem, *this, sparse_poly(rhs));
+            return std::move(rem);
+        }
+
         sparse_poly &operator %=(const sparse_poly &rhs){
             assign(*this % rhs);
             return *this;
+        }
+
+        sparse_poly &operator %=(const coefficient_type &rhs){
+            assign(*this % rhs);
+            return *this;
+        }
+
+        bool operator <(const sparse_poly &rhs) const{
+            return base_less_eq(false, rhs.container);
+        }
+
+        bool operator <(const coefficient_type &rhs) const{
+            return base_less_eq(false, sparse_poly(rhs).container);
+        }
+
+        bool operator >(const sparse_poly &rhs) const{
+            return base_greater_eq(false, rhs.container);
+        }
+
+        bool operator >(const coefficient_type &rhs) const{
+            return base_greater_eq(false, sparse_poly(rhs).container);
+        }
+
+        bool operator <=(const sparse_poly &rhs) const{
+            return base_less_eq(true, rhs.container);
+        }
+
+        bool operator <=(const coefficient_type &rhs) const{
+            return base_less_eq(true, sparse_poly(rhs).container);
+        }
+
+        bool operator >=(const sparse_poly &rhs) const{
+            return base_greater_eq(true, rhs.container);
+        }
+
+        bool operator >=(const coefficient_type &rhs) const{
+            return base_greater_eq(true, sparse_poly(rhs).container);
+        }
+
+        bool operator ==(const sparse_poly &rhs) const{
+            return container == rhs.container;
+        }
+
+        bool operator ==(const coefficient_type &rhs) const{
+            return container == sparse_poly(rhs).container;
+        }
+
+        bool operator !=(const sparse_poly &rhs) const{
+            return container != rhs.container;
+        }
+
+        bool operator !=(const coefficient_type &rhs) const{
+            return container != sparse_poly(rhs).container;
         }
 
         coefficient_proxy operator [](const order_type &order){
@@ -322,6 +496,7 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        const order_type &deg() const{ return container.rbegin()->first; }
         const coefficient_type &lc() const{ return container.rbegin()->second; }
 
         static sparse_poly &normal(sparse_poly &result, const sparse_poly &x){
@@ -404,6 +579,68 @@ namespace cpp_multi_precision{
         }
 
     private:
+        bool base_less_eq(bool final, const container_type &rhs_container) const{
+            typename container_type::const_reverse_iterator
+                lhs_iter = container.rbegin(),
+                lhs_end = container.rend(),
+                rhs_iter = rhs_container.rbegin(),
+                rhs_end = rhs_container.rend();
+            bool end_l = lhs_iter == lhs_end, end_r = rhs_iter == rhs_end;
+            if(!end_l || !end_r){
+                if(end_l && !end_r){ return false; }
+                if(!end_l && end_r){ return true; }
+                for(; lhs_iter != lhs_end && rhs_iter != rhs_end; ++lhs_iter, ++rhs_iter){
+                    const order_type &lhs_order(lhs_iter->first), &rhs_order(rhs_iter->first);
+                    if(lhs_order == rhs_order){
+                        const coefficient_type &lhs_coe(lhs_iter->second), &rhs_coe(rhs_iter->second);
+                        if(lhs_coe < rhs_coe){
+                            return true;
+                        }else if(lhs_coe > rhs_coe){
+                            return false;
+                        }
+                    }else if(lhs_order < rhs_order){
+                        return true;
+                    }else{
+                        return false;
+                    }
+                }
+                if(lhs_iter == lhs_end && rhs_iter != rhs_end){ return false; }
+                if(lhs_iter != lhs_end && rhs_iter == rhs_end){ return true; }
+            }
+            return final;
+        }
+
+        bool base_greater_eq(bool final, const container_type &rhs_container) const{
+            typename container_type::const_reverse_iterator
+                lhs_iter = container.rbegin(),
+                lhs_end = container.rend(),
+                rhs_iter = rhs_container.rbegin(),
+                rhs_end = rhs_container.rend();
+            bool end_l = lhs_iter == lhs_end, end_r = rhs_iter == rhs_end;
+            if(!end_l || !end_r){
+                if(end_l && !end_r){ return true; }
+                if(!end_l && end_r){ return false; }
+                for(; lhs_iter != lhs_end && rhs_iter != rhs_end; ++lhs_iter, ++rhs_iter){
+                    const order_type &lhs_order(lhs_iter->first), &rhs_order(rhs_iter->first);
+                    if(lhs_order == rhs_order){
+                        const coefficient_type &lhs_coe(lhs_iter->second), &rhs_coe(rhs_iter->second);
+                        if(lhs_coe > rhs_coe){
+                            return true;
+                        }else if(lhs_coe < rhs_coe){
+                            return false;
+                        }
+                    }else if(lhs_order > rhs_order){
+                        return true;
+                    }else{
+                        return false;
+                    }
+                }
+                if(lhs_iter == lhs_end && rhs_iter != rhs_end){ return true; }
+                if(lhs_iter != lhs_end && rhs_iter == rhs_end){ return false; }
+            }
+            return final;
+        }
+
         void add_order_n(const sparse_poly &rhs, const order_type &n){
             for(typename container_type::const_iterator rhs_iter = rhs.container.begin(), rhs_end = rhs.container.end(); rhs_iter != rhs_end; ++rhs_iter){
                 order_type order = rhs_iter->first;
@@ -769,6 +1006,77 @@ namespace cpp_multi_precision{
     private:
         container_type container;
     };
+
+    template<class OrderType, class CoefficientType, class Alloc>
+    sparse_poly<OrderType, CoefficientType, Alloc>
+    operator +(
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) + rhs; }
+
+    template<class OrderType, class CoefficientType, class Alloc>
+    sparse_poly<OrderType, CoefficientType, Alloc>
+    operator -(
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) - rhs; }
+
+    template<class OrderType, class CoefficientType, class Alloc>
+    sparse_poly<OrderType, CoefficientType, Alloc>
+    operator *(
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) * rhs; }
+
+    template<class OrderType, class CoefficientType, class Alloc>
+    sparse_poly<OrderType, CoefficientType, Alloc>
+    operator /(
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) / rhs; }
+
+    template<class OrderType, class CoefficientType, class Alloc>
+    sparse_poly<OrderType, CoefficientType, Alloc>
+    operator %(
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) % rhs; }
+
+    template<class OrderType, class CoefficientType, class Alloc>
+    bool operator <(
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) < rhs; }
+
+    template<class OrderType, class CoefficientType, class Alloc>
+    bool operator >(
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) > rhs; }
+
+    template<class OrderType, class CoefficientType, class Alloc>
+    bool operator <=(
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) <= rhs; }
+
+    template<class OrderType, class CoefficientType, class Alloc>
+    bool operator >=(
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) >= rhs; }
+
+    template<class OrderType, class CoefficientType, class Alloc>
+    bool operator ==(
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) == rhs; }
+
+    template<class OrderType, class CoefficientType, class Alloc>
+    bool operator !=(
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) != rhs; }
 
     template<class OrderType, class CoefficientType, class Alloc>
     std::ostream &operator <<(

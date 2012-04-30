@@ -23,7 +23,6 @@ namespace cpp_multi_precision{
         modular(const value_type &other_value, const value_type &other_modulus) :
             value_(other_value), modulus_(other_modulus)
         {
-            normalize_modulus();
             set_modulus_1_5();
             normalize();
         }
@@ -54,7 +53,6 @@ namespace cpp_multi_precision{
         }
 
         void normalize(){
-            normalize_sign();
             if(value_ >= modulus_1_5_){
                 force_normalize();
             }
@@ -273,18 +271,6 @@ namespace cpp_multi_precision{
     private:
         void inverse_sign(){
             value_ = -value_;
-        }
-
-        void normalize_sign(){
-            if(value_ < 0){
-                value_ = std::move(-value_);
-            }
-        }
-
-        void normalize_modulus(){
-            if(modulus_ < 0){
-                modulus_ = std::move(-modulus_);
-            }
         }
 
         void set_modulus(const value_type &x){

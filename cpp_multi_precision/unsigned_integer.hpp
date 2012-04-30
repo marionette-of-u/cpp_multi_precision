@@ -23,7 +23,7 @@ namespace cpp_multi_precision{
         typedef typename aux::rebind_container<Container>::template rebind<radix_type, typename Allocator::template rebind<radix_type>::other>::other container_type;
 
         unsigned_integer() : normalize_container(&unsigned_integer::normalize_container_impl){ assign(0); }
-        unsigned_integer(radix_type value) : normalize_container(&unsigned_integer::normalize_container_impl){ assign(value); }
+        unsigned_integer(unsigned_radix2_type value) : normalize_container(&unsigned_integer::normalize_container_impl){ assign(value); }
         unsigned_integer(const unsigned_integer &other) : normalize_container(other.normalize_container), container(other.container){}
         unsigned_integer(unsigned_integer &&other) : normalize_container(other.normalize_container), container(other.container){}
         unsigned_integer(const container_type &other_container) : normalize_container(&unsigned_integer::normalize_container_impl), container(other_container){}
@@ -40,9 +40,15 @@ namespace cpp_multi_precision{
             container = other.container;
         }
 
-        void assign(radix_type v){
-            container.resize(1);
-            container.front() = v;
+        void assign(unsigned_radix2_type v){
+            if((v >> radix_log2)){
+                container.resize(2);
+                container.front() = static_cast<radix_type>(v & ~static_cast<radix_type>(0));
+                container.back() = static_cast<radix_type>(v >> radix_log2);
+            }else{
+                container.resize(1);
+                container.front() = static_cast<radix_type>(v);
+            }
         }
 
         template<class Iterator>

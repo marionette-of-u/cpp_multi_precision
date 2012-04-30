@@ -18,8 +18,7 @@ namespace cpp_multi_precision{
         typedef Allocator allocator_type;
 
         integer() : unsigned_integer_type(), sign(true){}
-        integer(radix_type value) : unsigned_integer_type(value), sign(true){}
-        integer(radix_type value, bool sign_) : unsigned_integer_type(value), sign(sign_){}
+        integer(radix2_type value) : unsigned_integer_type(static_cast<unsigned_radix2_type>(value < 0 ? -value : value)), sign(value >= 0){}
         integer(const integer &other) : unsigned_integer_type(other.container), sign(other.sign){}
         integer(integer &&other) : unsigned_integer_type(other), sign(other.sign){}
         integer(const container_type &other_container, bool sign_ = true) : unsigned_integer_type(other_container), sign(sign_){}
@@ -32,9 +31,14 @@ namespace cpp_multi_precision{
             sign = true;
         }
 
-        void assign(radix_type v){
-            unsigned_integer_type::assign(v);
-            sign = true;
+        void assign(radix2_type v){
+            if(v < 0){
+                unsigned_integer_type::assign(static_cast<unsigned_radix2_type>(-v));
+                sign = false;
+            }else{
+                unsigned_integer_type::assign(static_cast<unsigned_radix2_type>(v));
+                sign = true;
+            }
         }
 
         void assign(const integer &other){
@@ -611,7 +615,7 @@ namespace cpp_multi_precision{
     template<class RadixType, unsigned int RadixLog2, class Radix2Type, class URadix2Type, class Container, class Allocator>
     integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>
     operator +(
-        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix_type lhs,
+        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix2_type lhs,
         const integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> &rhs
     ){
         integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> result(lhs);
@@ -622,7 +626,7 @@ namespace cpp_multi_precision{
     template<class RadixType, unsigned int RadixLog2, class Radix2Type, class URadix2Type, class Container, class Allocator>
     integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>
     operator -(
-        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix_type lhs,
+        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix2_type lhs,
         const integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> &rhs
     ){
         integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> result(lhs);
@@ -633,57 +637,57 @@ namespace cpp_multi_precision{
     template<class RadixType, unsigned int RadixLog2, class Radix2Type, class URadix2Type, class Container, class Allocator>
     integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>
     operator /(
-        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix_type lhs,
+        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix2_type lhs,
         const integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> &rhs
     ){  return integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>(lhs) / rhs; }
 
     template<class RadixType, unsigned int RadixLog2, class Radix2Type, class URadix2Type, class Container, class Allocator>
     integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>
     operator *(
-        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix_type lhs,
+        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix2_type lhs,
         const integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> &rhs
     ){  return integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>(lhs) * rhs; }
 
     template<class RadixType, unsigned int RadixLog2, class Radix2Type, class URadix2Type, class Container, class Allocator>
     integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>
     operator %(
-        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix_type lhs,
+        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix2_type lhs,
         const integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> &rhs
     ){  return integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>(lhs) % rhs; }
 
     template<class RadixType, unsigned int RadixLog2, class Radix2Type, class URadix2Type, class Container, class Allocator>
     bool operator <(
-        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix_type lhs,
+        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix2_type lhs,
         const integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> &rhs
     ){  return integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>(lhs) < rhs; }
 
     template<class RadixType, unsigned int RadixLog2, class Radix2Type, class URadix2Type, class Container, class Allocator>
     bool operator >(
-        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix_type lhs,
+        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix2_type lhs,
         const integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> &rhs
     ){  return integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>(lhs) > rhs; }
 
     template<class RadixType, unsigned int RadixLog2, class Radix2Type, class URadix2Type, class Container, class Allocator>
     bool operator <=(
-        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix_type lhs,
+        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix2_type lhs,
         const integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> &rhs
     ){  return integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>(lhs) <= rhs; }
 
     template<class RadixType, unsigned int RadixLog2, class Radix2Type, class URadix2Type, class Container, class Allocator>
     bool operator >=(
-        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix_type lhs,
+        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix2_type lhs,
         const integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> &rhs
     ){  return integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>(lhs) >= rhs; }
 
     template<class RadixType, unsigned int RadixLog2, class Radix2Type, class URadix2Type, class Container, class Allocator>
     bool operator ==(
-        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix_type lhs,
+        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix2_type lhs,
         const integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> &rhs
     ){  return integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>(lhs) == rhs; }
 
     template<class RadixType, unsigned int RadixLog2, class Radix2Type, class URadix2Type, class Container, class Allocator>
     bool operator !=(
-        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix_type lhs,
+        typename integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>::radix2_type lhs,
         const integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> &rhs
     ){  return integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator>(lhs) != rhs; }
 
