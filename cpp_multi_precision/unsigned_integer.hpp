@@ -250,7 +250,7 @@ namespace cpp_multi_precision{
                     if(iter_coe > *r){ r = &iter_coe; }
                 }
             }
-            return r == 0 ? radix_type(0) : *r;
+            return r == 0 ? 0 : *r;
         }
 
         unsigned_integer &norm1(unsigned_integer &result) const{
@@ -300,6 +300,11 @@ namespace cpp_multi_precision{
                 result.assign(a);
             }
             return result;
+        }
+
+        void ceil_pow2(){
+            unsigned_integer a(*this);
+            ceil_pow2(*this, a);
         }
 
         std::size_t ceil_log2() const{

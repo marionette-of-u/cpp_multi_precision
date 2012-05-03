@@ -79,7 +79,7 @@ namespace cpp_multi_precision{
         };
 
         template<class T>
-        std::size_t ceil_pow2(T n){
+        T ceil_pow2(T n){
             --n;
             for(std::size_t i = 1; i < sizeof(T) * 8; i <<= 1){
                 n = n | (n >> i);

@@ -69,8 +69,7 @@ namespace cpp_multi_precision{
                 std::pair<typename base_type::iterator, bool> result = base_type::insert(std::make_pair(v.first, v.second));
                 coefficient_type &coe(result.first->second);
                 if(result.second){
-                    bool sign = result.first->second.sign;
-                    coe.sign = !sign;
+                    set_sign(coe, get_sign(result.first->second));
                 }else{
                     coe -= v.second;
                 }
@@ -581,6 +580,81 @@ namespace cpp_multi_precision{
         }
 
     private:
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ORDER_CEIL_POW2 template<class T, void (T::base_type::*Func)()>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(ceil_pow2, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ORDER_CEIL_POW2);
+        template<class T>
+        static void ceil_pow2_dispatch(T &x, const T &y, typename boost::enable_if<has_ceil_pow2<T>>::type* = 0){
+            x = y;
+            x.ceil_pow2();
+        }
+
+        template<class T>
+        static void ceil_pow2_dispatch(T &x, const T &y, typename boost::disable_if<has_ceil_pow2<T>>::type* = 0){
+            x = aux::ceil_pow2(y);
+        }
+
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ORDER_CEIL_LOG2 template<class T, std::size_t (T::base_type::*Func)() const>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(ceil_log2, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ORDER_CEIL_LOG2);
+        template<class T>
+        static std::size_t ceil_log2_dispatch(const T &x, typename boost::enable_if<has_ceil_log2<T>>::type* = 0){
+            return x.ceil_log2();
+        }
+
+        template<class T>
+        static std::size_t ceil_log2_dispatch(const T &x, typename boost::disable_if<has_ceil_log2<T>>::type* = 0){
+            return aux::ceil_log2(x);
+        }
+
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_SIGN template<class T, bool Sign>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(sign, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_SIGN);
+        template<class T>
+        static void negate_dispatch(T &x, typename boost::enable_if<has_sign<T>>::type* = 0){
+            x.sign = !x.sign;
+        }
+
+        template<class T>
+        static void negate_dispatch(T &x, typename boost::disable_if<has_sign<T>>::type* = 0){
+            x = -x;
+        }
+
+        template<class T>
+        static void assign_reverse(T &x, const T &y, typename boost::enable_if<has_sign<T>>::type* = 0){
+            x.sign = !y.sign;
+        }
+
+        template<class T>
+        static void assign_reverse(T &x, const T &y, typename boost::disable_if<has_sign<T>>::type* = 0){
+            if(y > 0){
+                if(x > 0){ x = -x; }
+            }else{
+                if(x < 0){ x = -x; }
+            }
+        }
+
+        template<class T>
+        static bool get_sign(const T &x, typename boost::enable_if<has_sign<T>>::type* = 0){
+            return x.sign;
+        }
+
+        template<class T>
+        static bool get_sign(const T &x, typename boost::disable_if<has_sign<T>>::type* = 0){
+            return x >= 0;
+        }
+
+        template<class T>
+        static void set_sign(T &x, bool b, typename boost::enable_if<has_sign<T>>::type* = 0){
+            x.sign = b;
+        }
+
+        template<class T>
+        static void set_sign(T &x, bool b, typename boost::disable_if<has_sign<T>>::type* = 0){
+            if(b){
+                if(x < 0){ x = -x; }
+            }else{
+                if(x > 0){ x = -x; }
+            }
+        }
+
         bool base_less_eq(bool final, const container_type &rhs_container) const{
             typename container_type::const_reverse_iterator
                 lhs_iter = container.rbegin(),
@@ -659,13 +733,6 @@ namespace cpp_multi_precision{
             }
         }
 
-        void negate(){
-            for(typename container_type::iterator iter = container.begin(), end = container.end(); iter != end; ++iter){
-                coefficient_type &coe(iter->second);
-                coe.sign = !coe.sign;
-            }
-        }
-
         static void square_multi_impl(
             sparse_poly &result,
             const typename container_type::const_iterator &lhs_first, const typename container_type::const_iterator &lhs_last,
@@ -680,9 +747,9 @@ namespace cpp_multi_precision{
                 for(typename container_type::const_iterator rhs_iter = rhs_first, rhs_end = rhs_last; rhs_iter != rhs_end; ++rhs_iter){
                     const order_type &rhs_order(rhs_iter->first);
                     const coefficient_type &rhs_coe(rhs_iter->second);
-                    temp_order.assign(rhs_order);
+                    temp_order = rhs_order;
                     temp_order += lhs_order;
-                    aux::multi_dispatch<coefficient_type>(temp_coefficient, lhs_coe, rhs_coe);
+                    temp_coefficient = lhs_coe * rhs_coe;
                     result.addition_order_coe(temp_order, temp_coefficient);
                 }
             }
@@ -700,7 +767,7 @@ namespace cpp_multi_precision{
             }
             const order_type &order_f(f.container.rbegin()->first), &order_g(g.container.rbegin()->first);
             order_type n;
-            order_type::ceil_pow2(n, order_f > order_g ? order_f : order_g);
+            ceil_pow2_dispatch(n, order_f > order_g ? order_f : order_g);
             if(n < 2){
                 sparse_poly result;
                 square_multi(result, f, g);
@@ -757,7 +824,7 @@ namespace cpp_multi_precision{
                 typename container_type::iterator iter = container.find(order);
                 if(iter == container.end()){
                     iter = container.add(typename container_type::ref_value_type(order, coe));
-                    if(iter != container.end()){ iter->second.sign = !iter->second.sign; }
+                    if(iter != container.end()){ negate_dispatch(iter->second); }
                 }else{
                     coefficient_type &lhs_coe(iter->second);
                     lhs_coe -= coe;
@@ -895,14 +962,14 @@ namespace cpp_multi_precision{
             result.container.clear();
             sparse_poly &g(result);
             g[0] = 1;
-            std::size_t r = l.ceil_log2();
+            std::size_t r = ceil_log2_dispatch(l);
             order_type rem(1);
             for(std::size_t i = 0; i < r; ++i){
                 rem <<= 1;
                 sparse_poly next_g(g);
                 for(typename container_type::iterator double_g_iter = next_g.container.begin(), double_g_end = next_g.container.end(); double_g_iter != double_g_end; ++double_g_iter){
                     coefficient_type coe_double_g(double_g_iter->second);
-                    coefficient_type::multi(double_g_iter->second, coe_double_g, 2);
+                    double_g_iter->second = coe_double_g * 2;
                 }
                 {
                     sparse_poly f_g_square;
@@ -940,12 +1007,11 @@ namespace cpp_multi_precision{
                 order_type new_order(order);
                 new_order += n;
                 const coefficient_type &coe(rhs_iter->second);
-                coefficient_type new_coe;
-                aux::multi_dispatch<coefficient_type>(new_coe, coe, q);
+                coefficient_type new_coe = coe * q;
                 typename container_type::iterator iter = container.find(new_order);
                 if(iter == container.end()){
                     iter = container.add(typename container_type::ref_value_type(new_order, new_coe));
-                    if(iter != container.end()){ iter->second.sign = !new_coe.sign; }
+                    if(iter != container.end()){ assign_reverse(iter->second, new_coe); }
                 }else{
                     coefficient_type &lhs_coe(iter->second);
                     lhs_coe -= new_coe;

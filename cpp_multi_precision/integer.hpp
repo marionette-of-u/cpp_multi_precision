@@ -14,6 +14,7 @@ namespace cpp_multi_precision{
         typedef Radix2Type radix2_type;
         typedef URadix2Type unsigned_radix2_type;
         typedef unsigned_integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> unsigned_integer_type;
+        typedef unsigned_integer_type base_type;
         typedef typename unsigned_integer_type::container_type container_type;
         typedef Allocator allocator_type;
 

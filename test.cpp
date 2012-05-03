@@ -7,7 +7,70 @@
 #include "cpp_multi_precision/rational.hpp"
 #include "cpp_multi_precision/integer.hpp"
 
-int test_sparse_poly(){
+void test_simple_sparse_poly(){
+    typedef cpp_multi_precision::sparse_poly<int, int> sparse_poly;
+
+    std::cout << "start test_simple_sparse_poly\n";
+
+    sparse_poly poly_a, poly_b, poly_c, poly_r, poly_cl, poly_cr;
+    // a += 18 * x^3
+    poly_a[3] = 18;
+    // a -= 42 * x^2
+    poly_a[2] -= 42;
+    // a += 30 * x
+    poly_a[1] = 30;
+    // a -= 6
+    poly_a[0] -= 6;
+
+    // b -= 12 * x^2
+    poly_b[2] -= 12;
+    // b += 10 * x
+    poly_b[1] = 10;
+    // b -= 2
+    poly_b[0] -= 2;
+
+    std::cout << poly_a * poly_b << "\n";
+
+    sparse_poly a(2), f(a + a), g;
+    bool ret_comp;
+
+    g = 1 + a;
+    g = 1 - a;
+    g = 1 * a;
+    g = 1 / a;
+    ret_comp = 1 < a;
+    ret_comp = 1 > a;
+    ret_comp = 1 <= a;
+    ret_comp = 1 >= a;
+    ret_comp = 1 == a;
+    ret_comp = 1 != a;
+
+    g = a + 1;
+    g = a - 1;
+    g = a * 1;
+    g = a / 1;
+    ret_comp = a < 1;
+    ret_comp = a > 1;
+    ret_comp = a <= 1;
+    ret_comp = a >= 1;
+    ret_comp = a == 1;
+    ret_comp = a != 1;
+
+    g = f + a;
+    g = f - a;
+    g = f * a;
+    g = f / a;
+    ret_comp = f < a;
+    ret_comp = f > a;
+    ret_comp = f <= a;
+    ret_comp = f >= a;
+    ret_comp = f == a;
+    ret_comp = f != a;
+
+    std::cout << "end of test_simple_sparse_poly\n\n";
+}
+
+void test_sparse_poly(){
     // 次数となる整数型
     typedef cpp_multi_precision::integer<
         unsigned int,
@@ -96,8 +159,6 @@ int test_sparse_poly(){
     ret_comp = f != a;
 
     std::cout << "end of test_sparse_poly\n\n";
-
-    return 0;
 }
 
 void test_rational(){
@@ -291,11 +352,11 @@ void test_modular_and_poly(){
     std::cout << "end of test_modular_and_poly\n\n";
 }
 
-#include <string>
 #include <fstream>
 
 int main(){
     test_modular();
+    test_simple_sparse_poly();
     test_sparse_poly();
     test_rational();
     test_integer();
