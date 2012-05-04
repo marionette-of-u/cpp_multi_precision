@@ -6,14 +6,6 @@
 namespace cpp_multi_precision{
     template<class RadixType, std::size_t RadixLog2, class Radix2Type, class URadix2Type, class Container, class Allocator = std::allocator<int>>
     class unsigned_integer{
-        template<
-            class FractionalRadixType,
-            std::size_t FractionalRadixLog2,
-            class FractionalRadix2Type,
-            class FractionalURadix2Type,
-            class FractionalContainer
-        > friend class aux::fractional;
-    
     public:
         static const std::size_t radix_log2 = RadixLog2, radix2_log2 = RadixLog2 * 2;
 

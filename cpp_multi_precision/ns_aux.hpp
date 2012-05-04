@@ -2,13 +2,6 @@
 #define HPP_CPP_MULTI_PRECISION_NS_AUX
 
 #include <string>
-#include <vector>
-#include <deque>
-#include <list>
-#include <stack>
-#include <queue>
-#include <set>
-#include <map>
 #include <ostream>
 #include <algorithm>
 #include <utility>
@@ -17,8 +10,8 @@
 #include <stdexcept>
 #include <cmath>
 #include <cassert>
+#include <limits.h>
 #include <boost/utility/enable_if.hpp>
-#include <boost/random.hpp>
 
 namespace cpp_multi_precision{
     namespace aux{
@@ -36,17 +29,6 @@ namespace cpp_multi_precision{
         struct wrapped_rebind_container{
             typedef typename rebind_container<Container>::template rebind<NewType, typename Container::allocator_type::template rebind<NewType>::other>::other type;
         };
-
-        template<class Dummy>
-        struct random_template{
-            static boost::mt19937 &engine(){ static boost::mt19937 e; return e; }
-            template<class T>
-            static T gen(const T &mod){
-                return static_cast<T>(engine()()) % mod;
-            }
-        };
-
-        typedef random_template<void> random;
 
         template<class Container, class Alloc>
         class bit_array{
@@ -211,8 +193,23 @@ namespace cpp_multi_precision{
             bool value;
         };
 
-        template<class RadixType, std::size_t RadixLog2, class Radix2Type, class URadix2Type, class Container>
-        class fractional;
+        template<class Type>
+        struct prime{
+            typedef Type value_type;
+            static value_type n_th(std::size_t n){
+                static const value_type table[] = {
+#include "prime32_262144.hpp"
+                };
+                struct size_init{ size_init(std::size_t n){ prime::size() = n; } };
+                static size_init init(sizeof(table) / sizeof(value_type));
+                return table[n];
+            }
+
+            static std::size_t &size(){
+                static std::size_t n;
+                return n;
+            }
+        };
     }
 }
 

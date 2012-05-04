@@ -347,7 +347,14 @@ void test_modular_and_poly(){
     std::cout << "end of test_modular_and_poly\n\n";
 }
 
+void test_prime(){
+    typedef cpp_multi_precision::aux::prime<unsigned int> prime_type;
+    std::cout << prime_type::n_th(10) << "\n";
+    std::cout << prime_type::size() << "\n";
+}
+
 int main(){
+    test_prime();
     test_modular();
     test_simple_sparse_poly();
     test_sparse_poly();

@@ -2,7 +2,7 @@
 #define HPP_CPP_MULTI_PRECISION_SPARSE_POLY
 
 #include <utility>
-#include <string>
+#include <map>
 #include "ns_aux.hpp"
 
 namespace cpp_multi_precision{
