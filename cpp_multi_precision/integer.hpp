@@ -341,9 +341,10 @@ namespace cpp_multi_precision{
             }
         }
 
-    public:
-        static integer &div(integer &result, integer &rem, const integer &lhs, const integer &rhs){
-            unsigned_integer_type::div(result, rem, lhs, rhs);
+    private:
+        template<bool Rem>
+        static integer &div_impl(integer &result, integer &rem, const integer &lhs, const integer &rhs){
+            monic_div_impl<Rem>(result, rem, lhs, rhs);
             if(static_cast<unsigned_integer_type&>(result) == 0){
                 result.sign = true;
             }else{
@@ -353,14 +354,19 @@ namespace cpp_multi_precision{
             return result;
         }
 
+    public:
+        static integer &div(integer &result, integer &rem, const integer &lhs, const integer &rhs){
+            return div_impl<true>(result, rem, lhs, rhs);
+        }
+
         static integer &div(integer &result, const integer &lhs, const integer &rhs){
             integer rem;
-            return div(result, rem, lhs, rhs);
+            return div_impl<false>(result, rem, lhs, rhs);
         }
 
         static integer &mod(integer &rem, const integer &lhs, const integer &rhs){
             integer result;
-            div(result, rem, lhs, rhs);
+            div_impl<true>(result, rem, lhs, rhs);
             return rem;
         }
 
@@ -547,6 +553,36 @@ namespace cpp_multi_precision{
             sub_iterator_n(rhs.sign, rhs.container.begin(), rhs.container.end(), n);
         }
 
+    private:
+        template<bool Rem>
+        static integer &monic_div_impl(integer &result, integer &rem, const integer &lhs, const integer &rhs){
+            if(!rhs.is_monic()){
+                unsigned_integer_type::div(result, rem, lhs, rhs);
+                return result;
+            }
+            result = 0;
+            if(rhs.container.size() > lhs.container.size()){
+                if(Rem){ rem = lhs; }
+                return result;
+            }
+            std::size_t m = lhs.container.size() - rhs.container.size() + 1;
+            integer inv_rev_rhs;
+            {
+                integer rev_rhs(rhs);
+                rev_rhs.rev();
+                inverse(inv_rev_rhs, rev_rhs, m);
+            }
+            {
+                integer rev_lhs(lhs);
+                rev_lhs.rev();
+                result = rev_lhs * std::move(inv_rev_rhs);
+            }
+            if(result.container.size() > m){ result.container.resize(m); }
+            result.rev();
+            if(Rem){ rem = lhs - rhs * result; }
+            return result;
+        }
+
     public:
         static integer &gcd_impl(integer &result, const integer &lhs, const integer &rhs){
             unsigned_integer_type::gcd_impl(result, lhs, rhs);
@@ -590,6 +626,25 @@ namespace cpp_multi_precision{
             result = std::move(r_0);
             c_lhs = std::move(s_0);
             c_rhs = std::move(t_0);
+            return result;
+        }
+
+        static integer &inverse(integer &result, const integer &f, std::size_t l){
+            integer &g(result);
+            g = 1;
+            std::size_t r = aux::ceil_log2(l), rem = 1;
+            for(std::size_t i = 0; i < r; ++i){
+                rem <<= 1;
+                integer next_g(g);
+                for(
+                    typename container_type::iterator double_g_iter = next_g.container.begin(), double_g_end = next_g.container.end();
+                    double_g_iter != double_g_end;
+                    ++double_g_iter
+                ){ *double_g_iter = *double_g_iter * 2; }
+                next_g -= f * g * g;
+                if(next_g.container.size() >= rem){ next_g.container.resize(rem - 1); }
+                g = std::move(next_g);
+            }
             return result;
         }
 

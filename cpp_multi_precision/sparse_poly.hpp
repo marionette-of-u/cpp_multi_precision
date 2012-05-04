@@ -866,7 +866,7 @@ namespace cpp_multi_precision{
             }
             result.container.clear();
             if(rhs.container.rbegin()->first > lhs.container.rbegin()->first){
-                rem.assign(lhs);
+                if(Rem){ rem.assign(lhs); }
                 return result;
             }
             order_type m(lhs.container.rbegin()->first);

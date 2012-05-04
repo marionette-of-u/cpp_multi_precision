@@ -215,8 +215,6 @@ void test_integer(){
 
     std::cout << "start test_integer\n";
 
-    integer::pow(g, a, f);
-
     g = 1 + a;
     g = 1 - a;
     g = 1 * a;

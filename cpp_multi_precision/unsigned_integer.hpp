@@ -251,6 +251,10 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        bool is_monic() const{
+            return !container.empty() && container.back() == 1;
+        }
+
         radix_type cont() const{
             if(container.size() == 1){ return container.front(); }
             radix_type a = container.front();
@@ -804,8 +808,6 @@ namespace cpp_multi_precision{
                 container.pop_back();
             }
         }
-
-        void normalize_container_dummy(){}
 
         template<class Ptr, class Char>
         void read_impl(const Ptr &str, int zero, int nine, const Ptr &delim = Ptr()){
