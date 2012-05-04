@@ -243,14 +243,12 @@ namespace cpp_multi_precision{
         }
 
         radix_type infinity_norm() const{
-            const radix_type *r = 0;
+            const radix_type r = 0;
             for(typename container_type::const_iterator iter = container.begin(), end = container.end(); iter != end; ++iter){
                 const radix_type &iter_coe(*iter);
-                if(r == 0){ r = &iter_coe; }else{
-                    if(iter_coe > *r){ r = &iter_coe; }
-                }
+                if(iter_coe > r){ r = iter_coe; }
             }
-            return r == 0 ? 0 : *r;
+            return r;
         }
 
         unsigned_integer &norm1(unsigned_integer &result) const{
@@ -384,6 +382,14 @@ namespace cpp_multi_precision{
             radix_type t = container.back();
             while(t >>= 1){ ++i; }
             return i + (container.size() - 1) * radix_log2;
+        }
+
+        static const unsigned_integer &max(const unsigned_integer &a, const unsigned_integer &b){
+            return a > b ? a : b;
+        }
+
+        static const unsigned_integer &min(const unsigned_integer &a, const unsigned_integer &b){
+            return a < b ? a : b;
         }
 
     protected:

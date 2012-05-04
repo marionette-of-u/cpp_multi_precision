@@ -525,30 +525,13 @@ namespace cpp_multi_precision{
         }
 
         coefficient_type infinity_norm() const{
-            const coefficient_type *r = 0;
+            coefficient_type r = 0;
             for(typename container_type::const_iterator iter = container.begin(), end = container.end(); iter != end; ++iter){
-                const coefficient_type &iter_coe(iter->second);
-                if(r == 0){ r = &iter_coe; }else{
-                    if(iter_coe.sign){
-                        if(r->sign){
-                            if(iter_coe > *r){ r = &iter_coe; }
-                        }else{
-                            iter_coe.sign = false;
-                            if(iter_coe < *r){ r = &iter_coe; }
-                            iter_coe.sign = true;
-                        }
-                    }else{
-                        if(!r->sign){
-                            if(iter_coe < *r){ r = &iter_coe; }
-                        }else{
-                            iter_coe.sign = true;
-                            if(iter_coe > *r){ r = &iter_coe; }
-                            iter_coe.sign = false;
-                        }
-                    }
-                }
+                const coefficient_type &coe(iter->second);
+                max_dispatch(r, coe);
             }
-            return r == 0 ? coefficient_type(0) : *r;
+            set_sign_dispatch(r, true);
+            return std::move(r);
         }
 
         bool is_monic() const{
@@ -580,33 +563,70 @@ namespace cpp_multi_precision{
         }
 
     private:
-#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ORDER_CEIL_POW2 template<class T, void (T::base_type::*Func)()>
-        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(ceil_pow2, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ORDER_CEIL_POW2);
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ABS_MAX template<class T, const typename T::base_type& (*Func)(const typename T::base_type&, const typename T::base_type&)>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(max, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ABS_MAX);
         template<class T>
-        static void ceil_pow2_dispatch(T &x, const T &y, typename boost::enable_if<has_ceil_pow2<T>>::type* = 0){
+        static void max_dispatch(T &a, const T &b, typename boost::enable_if<has_max<T>>::type* = nullptr){
+            const typename T::base_type *ptr = &((T::base_type::max)(a, b));
+            if(ptr != &a){ a = b; }
+        }
+
+        template<class T>
+        static void max_dispatch(T &a, const T &b, typename boost::disable_if<has_max<T>>::type* = nullptr){
+            a = (std::max)(std::abs(a), std::abs(b));
+        }
+
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_CEIL_POW2 template<class T, void (T::base_type::*Func)()>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(ceil_pow2, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_CEIL_POW2);
+        template<class T>
+        static void ceil_pow2_dispatch(T &x, const T &y, typename boost::enable_if<has_ceil_pow2<T>>::type* = nullptr){
             x = y;
             x.ceil_pow2();
         }
 
         template<class T>
-        static void ceil_pow2_dispatch(T &x, const T &y, typename boost::disable_if<has_ceil_pow2<T>>::type* = 0){
+        static void ceil_pow2_dispatch(T &x, const T &y, typename boost::disable_if<has_ceil_pow2<T>>::type* = nullptr){
             x = aux::ceil_pow2(y);
         }
 
-#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ORDER_CEIL_LOG2 template<class T, std::size_t (T::base_type::*Func)() const>
-        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(ceil_log2, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ORDER_CEIL_LOG2);
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_CEIL_LOG2 template<class T, std::size_t (T::base_type::*Func)() const>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(ceil_log2, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_CEIL_LOG2);
         template<class T>
-        static std::size_t ceil_log2_dispatch(const T &x, typename boost::enable_if<has_ceil_log2<T>>::type* = 0){
+        static std::size_t ceil_log2_dispatch(const T &x, typename boost::enable_if<has_ceil_log2<T>>::type* = nullptr){
             return x.ceil_log2();
         }
 
         template<class T>
-        static std::size_t ceil_log2_dispatch(const T &x, typename boost::disable_if<has_ceil_log2<T>>::type* = 0){
+        static std::size_t ceil_log2_dispatch(const T &x, typename boost::disable_if<has_ceil_log2<T>>::type* = nullptr){
             return aux::ceil_log2(x);
         }
 
 #define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_SIGN template<class T, bool Sign>
         CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(sign, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_SIGN);
+        template<class T>
+        static bool get_sign_dispatch(const T &x, typename boost::enable_if<has_sign<T>>::type* = nullptr){
+            return x.sign;
+        }
+
+        template<class T>
+        static bool get_sign_dispatch(const T &x, typename boost::disable_if<has_sign<T>>::type* = nullptr){
+            return x >= 0;
+        }
+
+        template<class T>
+        static void set_sign_dispatch(T &x, bool b, typename boost::enable_if<has_sign<T>>::type* = nullptr){
+            x.sign = b;
+        }
+
+        template<class T>
+        static void set_sign_dispatch(T &x, bool b, typename boost::disable_if<has_sign<T>>::type* = nullptr){
+            if(b){
+                if(x < 0){ x = -x; }
+            }else{
+                if(x > 0){ x = -x; }
+            }
+        }
+
         template<class T>
         static void negate_dispatch(T &x, typename boost::enable_if<has_sign<T>>::type* = 0){
             x.sign = !x.sign;
@@ -618,12 +638,12 @@ namespace cpp_multi_precision{
         }
 
         template<class T>
-        static void assign_reverse(T &x, const T &y, typename boost::enable_if<has_sign<T>>::type* = 0){
+        static void assign_reverse_dispatch(T &x, const T &y, typename boost::enable_if<has_sign<T>>::type* = 0){
             x.sign = !y.sign;
         }
 
         template<class T>
-        static void assign_reverse(T &x, const T &y, typename boost::disable_if<has_sign<T>>::type* = 0){
+        static void assign_reverse_dispatch(T &x, const T &y, typename boost::disable_if<has_sign<T>>::type* = 0){
             if(y > 0){
                 if(x > 0){ x = -x; }
             }else{
@@ -1011,7 +1031,7 @@ namespace cpp_multi_precision{
                 typename container_type::iterator iter = container.find(new_order);
                 if(iter == container.end()){
                     iter = container.add(typename container_type::ref_value_type(new_order, new_coe));
-                    if(iter != container.end()){ assign_reverse(iter->second, new_coe); }
+                    if(iter != container.end()){ assign_reverse_dispatch(iter->second, new_coe); }
                 }else{
                     coefficient_type &lhs_coe(iter->second);
                     lhs_coe -= new_coe;

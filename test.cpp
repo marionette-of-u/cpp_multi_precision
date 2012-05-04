@@ -1,6 +1,4 @@
 ﻿#include <iostream>
-#include <complex>
-#include <cmath>
 #include <vector>
 #include "cpp_multi_precision/modular.hpp"
 #include "cpp_multi_precision/sparse_poly.hpp"
@@ -12,24 +10,18 @@ void test_simple_sparse_poly(){
 
     std::cout << "start test_simple_sparse_poly\n";
 
-    sparse_poly poly_a, poly_b, poly_c, poly_r, poly_cl, poly_cr;
-    // a += 18 * x^3
-    poly_a[3] = 18;
-    // a -= 42 * x^2
-    poly_a[2] -= 42;
-    // a += 30 * x
-    poly_a[1] = 30;
-    // a -= 6
-    poly_a[0] -= 6;
+    sparse_poly poly_a, poly_b, poly_c;
 
-    // b -= 12 * x^2
-    poly_b[2] -= 12;
-    // b += 10 * x
-    poly_b[1] = 10;
-    // b -= 2
-    poly_b[0] -= 2;
+    // x^2 - x - 1
+    poly_a [2](1) [1](-1) [0](-1);
 
-    std::cout << poly_a * poly_b << "\n";
+    // x^5 + 2x^4 - x^3 + x^2 + 2x
+    poly_b [5](1) [4](2) [3](-1) [2](1) [1](2);
+
+    std::cout << poly_a << " * " << poly_b << " = "<< poly_a * poly_b << "\n";
+
+    poly_c [10](-10) [5](5) [0](-20);
+    std::cout << "infinity_norm(" << poly_c << ") = " << poly_c.infinity_norm() << "\n";
 
     sparse_poly a(2), f(a + a), g;
     bool ret_comp;
@@ -279,11 +271,11 @@ void test_modular(){
     bool ret_comp;
 
     f.force_normalize();
-    std::cout << f.to_string() << "\n";
+    std::cout << f << "\n";
+    std::cout << -f << "\n";
+    std::cout << f + -f << "\n";
 
-    std::cout << f + -f << std::endl;
-
-    std::cout << modular::pow(g, a, f) << std::endl;
+    std::cout << modular::pow(g, a, f) << "\n";
 
     g = 1 + a;
     g = 1 - a;
@@ -323,7 +315,10 @@ void test_modular_and_poly(){
     
     std::cout << "start test_modular_and_poly\n";
 
-    sparse_poly a, modulus;
+    sparse_poly a, c, modulus;
+
+    c [10](-10) [5](5) [0](-20);
+    std::cout << "infinity_norm(" << c << ") = " << c.infinity_norm() << "\n";
 
     // modulus = x^2 - x - 1
     modulus [2](1) [1](-1) [0](-1);
@@ -332,27 +327,25 @@ void test_modular_and_poly(){
     // a = x^3 ≡ 2x + 1 mod modulus
     a = 0;
     a [3](1);
-    std::cout << modular(a, modulus) << "\n";
+    std::cout << a << " === " << modular(a, modulus) << "\n";
 
     // a = x^2 + 2x ≡ 3x + 1 mod modulus
     a = 0;
     a [2](1) [1](2);
-    std::cout << modular(a, modulus) << "\n";
+    std::cout << a << " === " << modular(a, modulus) << "\n";
 
     // a = 6x^2 + 8x + 2 ≡ 14x + 8 mod modulus
     a = 0;
     a [2](6) [1](8) [0](2);
-    std::cout << modular(a, modulus) << "\n";
+    std::cout << a << " === " << modular(a, modulus) << "\n";
 
-    // a = 6x^2 + 8x + 2 ≡ 12x + 7 mod modulus
+    // a = x^5 + 2x^4 - x^3 + x^2 + 2x ≡ 12x + 7 mod modulus
     a = 0;
     a [5](1) [4](2) [3](-1) [2](1) [1](2);
-    std::cout << modular(a, modulus) << "\n";
+    std::cout << a << " === " << modular(a, modulus) << "\n";
 
     std::cout << "end of test_modular_and_poly\n\n";
 }
-
-#include <fstream>
 
 int main(){
     test_modular();
