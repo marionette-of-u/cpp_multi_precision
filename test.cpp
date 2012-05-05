@@ -347,17 +347,25 @@ void test_modular_and_poly(){
 
 void test_prime(){
     typedef cpp_multi_precision::aux::prime<unsigned int> prime_type;
-    prime_type::out_of_range_prime_queue();
+    std::vector<unsigned int> r = prime_type::get_prime_set(0x382b6b + 100, 20);
+    for(auto iter = r.begin(), end = r.end(); iter != end; ++iter){
+        std::cout << *iter << "\n";
+    }
+    std::cout << "\n";
+    r = prime_type::get_prime_set(0x382b6b + 9999, 5);
+    for(auto iter = r.begin(), end = r.end(); iter != end; ++iter){
+        std::cout << *iter << "\n";
+    }
 }
 
 int main(){
     test_prime();
-    test_modular();
-    test_simple_sparse_poly();
-    test_sparse_poly();
-    test_rational();
-    test_integer();
-    test_modular_and_poly();
+    //test_modular();
+    //test_simple_sparse_poly();
+    //test_sparse_poly();
+    //test_rational();
+    //test_integer();
+    //test_modular_and_poly();
 
     return 0;
 }
