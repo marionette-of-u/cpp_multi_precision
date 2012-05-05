@@ -305,16 +305,13 @@ namespace cpp_multi_precision{
 
             static std::size_t push_ext_prime(value_type k){
                 if(k <= ext_prime_upper_bound()){ return 0; }
-                std::size_t num = 0, prev_size = ext_prime_vec().size();
                 if((k & 1) == 0){ ++k; }
-                for(value_type i = k, end = ext_prime_upper_bound(); i != end; i -= 2){
+                for(value_type i = ext_prime_upper_bound() + 2; i <= k; i += 2){
                     if(prime_div_test(i)){
                         ext_prime_vec().push_back(i);
-                        ++num;
                     }
                 }
                 ext_prime_upper_bound() = k;
-                std::reverse(ext_prime_vec().begin() + prev_size, ext_prime_vec().end());
                 return ext_prime_vec().size() - 1;
             }
 
