@@ -268,10 +268,10 @@ namespace cpp_multi_precision{
         }
 
         template<class Type, std::size_t N = sizeof(Type) * 8>
-        struct prime;
+        struct prime_list;
 
         template<class Type>
-        struct prime<Type, 32>{
+        struct prime_list<Type, 32>{
             typedef Type value_type;
             typedef std::vector<value_type> ext_prime_vec_type;
 
@@ -352,10 +352,10 @@ namespace cpp_multi_precision{
 
                 struct init_type{
                     init_type(std::size_t n, value_type begin, value_type end){
-                        prime::table_size() = n;
-                        prime::range_lower_bound() = begin;
-                        prime::range_upper_bound() = end;
-                        prime::ext_prime_upper_bound() = end;
+                        prime_list::table_size() = n;
+                        prime_list::range_lower_bound() = begin;
+                        prime_list::range_upper_bound() = end;
+                        prime_list::ext_prime_upper_bound() = end;
                     }
                 };
 
@@ -388,53 +388,150 @@ namespace cpp_multi_precision{
                 return vec;
             }
 
-            static std::size_t &ext_prime_upper_bound(){
-                static std::size_t n = 0;
+            static value_type &ext_prime_upper_bound(){
+                static value_type n = 0;
                 return n;
             }
         };
 
-//        template<class Type>
-//        struct prime<Type, 64>{
-//            typedef Type value_type;
-//
-//            static value_type table(std::size_t n){
-//                static const value_type table_[] = {
-//#include "prime64_262144.hpp"
-//                };
-//
-//                struct init_type{
-//                    init_type(std::size_t n, value_type begin, value_type end){
-//                        prime::table_size() = n;
-//                        prime::lower_bound() = begin;
-//                        prime::upper_bound() = end;
-//                    }
-//                };
-//
-//                static init_type init(
-//                    sizeof(table_) / sizeof(value_type),
-//                    table_[0],
-//                    table_[sizeof(table_) / sizeof(value_type) - 1]
-//                );
-//
-//                return table[n];
-//            }
-//
-//            static std::size_t &table_size(){
-//                static std::size_t n;
-//                return n;
-//            }
-//
-//            static value_type &lower_bound(){
-//                static value_type n;
-//                return n;
-//            }
-//
-//            static value_type &upper_bound(){
-//                static value_type n;
-//                return n;
-//            }
-//        };
+        template<class Type>
+        struct prime_list<Type, 64>{
+            typedef Type value_type;
+            typedef std::vector<value_type> ext_prime_vec_type;
+            typedef prime_list<value_type, 32> prime32_type;
+
+            static std::vector<value_type> get_prime_set(value_type k, std::size_t n){
+                table(0);
+                std::vector<value_type> r;
+                r.resize(n);
+                if(k < range_lower_bound()){
+                    r = std::move(prime32_type::get_prime_set(k, n));
+                }else if(k <= range_upper_bound()){
+                    std::size_t index = get_table_index(k);
+                    if(index >= n){
+                        for(std::size_t i = 0; i < n; ++i){
+                            r[n - i - 1] = table(index - i);
+                        }
+                    }else{
+                        std::size_t i = 0;
+                        for(; i < index; ++i){
+                            r[n - i - 1] = table(index - i);
+                        }
+                        std::size_t m = n - index;
+                        std::vector<value_type> rest(std::move(prime32_type::get_prime_set(range_lower_bound(), m)));
+                        for(std::size_t j = 0; j < m; ++j){
+                            r[m - j - 1] = rest[m - j - 1];
+                        }
+                    }
+                }else{
+                    std::size_t index = push_ext_prime(k);
+                    if(index == 0){ index = get_ext_index(k); }
+                    if(n > ext_prime_vec().size()){
+                        for(std::size_t i = 0, end = ext_prime_vec().size(); i < end; ++i){
+                            r[n - i - 1] = ext_prime_vec()[i];
+                        }
+                        for(std::size_t i = 0, end = n - ext_prime_vec().size(); i < end; ++i){
+                            r[n - i - ext_prime_vec().size() - 1] = table(table_size() - i - 1);
+                        }
+                    }else{
+                        for(std::size_t i = 0; i < n; ++i){
+                            r[n - i - 1] = ext_prime_vec()[index - i - 1];
+                        }
+                    }
+                }
+                return std::move(r);
+            }
+
+            static std::size_t push_ext_prime(value_type k){
+                if(k <= ext_prime_upper_bound()){ return 0; }
+                if((k & 1) == 0){ ++k; }
+                for(value_type i = ext_prime_upper_bound() + 2; i <= k; i += 2){
+                    if(prime_div_test(i)){
+                        ext_prime_vec().push_back(i);
+                    }
+                }
+                ext_prime_upper_bound() = k;
+                return ext_prime_vec().size() - 1;
+            }
+
+            static std::size_t get_ext_index(value_type k){
+                std::size_t lower = 0, upper = ext_prime_vec().size(), n;
+                for(; upper - lower != 1; ){
+                    n = (upper + lower) / 2;
+                    value_type l = ext_prime_vec()[n];
+                    if(l == k){ break; }
+                    if(l > k){
+                        upper = n;
+                    }else{
+                        lower = n;
+                    }
+                }
+                return n;
+            }
+
+            static std::size_t get_table_index(value_type k){
+                std::size_t lower = 0, upper = table_size(), n;
+                for(; upper - lower != 1; ){
+                    n = (upper + lower) / 2;
+                    value_type l = table(n);
+                    if(l == k){ break; }
+                    if(l > k){
+                        upper = n;
+                    }else{
+                        lower = n;
+                    }
+                }
+                return n;
+            }
+
+            static value_type table(std::size_t n){
+                static const value_type table_[] = {
+#include "prime64_262144.hpp"
+                };
+
+                struct init_type{
+                    init_type(std::size_t n, value_type begin, value_type end){
+                        prime_list::table_size() = n;
+                        prime_list::range_lower_bound() = begin;
+                        prime_list::range_upper_bound() = end;
+                        prime_list::ext_prime_upper_bound() = end;
+                    }
+                };
+
+                static init_type init(
+                    sizeof(table_) / sizeof(value_type),
+                    table_[0],
+                    table_[sizeof(table_) / sizeof(value_type) - 1]
+                );
+
+                return table_[n];
+            }
+
+            static std::size_t &table_size(){
+                static std::size_t n;
+                return n;
+            }
+
+            static value_type &range_lower_bound(){
+                static value_type n;
+                return n;
+            }
+
+            static value_type &range_upper_bound(){
+                static value_type n;
+                return n;
+            }
+
+            static ext_prime_vec_type &ext_prime_vec(){
+                static ext_prime_vec_type vec;
+                return vec;
+            }
+
+            static value_type &ext_prime_upper_bound(){
+                static value_type n = 0;
+                return n;
+            }
+        };
     }
 }
 

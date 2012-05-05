@@ -345,27 +345,37 @@ void test_modular_and_poly(){
     std::cout << "end of test_modular_and_poly\n\n";
 }
 
-void test_prime(){
-    typedef cpp_multi_precision::aux::prime<unsigned int> prime_type;
-    std::vector<unsigned int> r = prime_type::get_prime_set(0x382b6b + 100, 20);
-    for(auto iter = r.begin(), end = r.end(); iter != end; ++iter){
+void test_prime_list(){
+    std::cout << "start test_prime_list\n";
+
+    typedef cpp_multi_precision::aux::prime_list<unsigned int> prime_list32_type;
+    std::vector<unsigned int> r32 = prime_list32_type::get_prime_set(0x382b6b + 2, 10);
+    for(auto iter = r32.begin(), end = r32.end(); iter != end; ++iter){
         std::cout << *iter << "\n";
     }
     std::cout << "\n";
-    r = prime_type::get_prime_set(0x382b6b + 9999, 5);
-    for(auto iter = r.begin(), end = r.end(); iter != end; ++iter){
+    r32 = prime_list32_type::get_prime_set(0x382b6b + 9999, 5);
+    for(auto iter = r32.begin(), end = r32.end(); iter != end; ++iter){
         std::cout << *iter << "\n";
     }
+    std::cout << "\n";
+    typedef cpp_multi_precision::aux::prime_list<unsigned long long> prime_list64_type;
+    std::vector<unsigned long long> r64 = prime_list64_type::get_prime_set(0x10058b727 + 100, 10);
+    for(auto iter = r64.begin(), end = r64.end(); iter != end; ++iter){
+        std::cout << *iter << "\n";
+    }
+
+    std::cout << "end of test_prime_list\n\n";
 }
 
 int main(){
-    test_prime();
-    //test_modular();
-    //test_simple_sparse_poly();
-    //test_sparse_poly();
-    //test_rational();
-    //test_integer();
-    //test_modular_and_poly();
+    test_prime_list();
+    test_modular();
+    test_simple_sparse_poly();
+    test_sparse_poly();
+    test_rational();
+    test_integer();
+    test_modular_and_poly();
 
     return 0;
 }
