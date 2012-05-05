@@ -347,8 +347,7 @@ void test_modular_and_poly(){
 
 void test_prime(){
     typedef cpp_multi_precision::aux::prime<unsigned int> prime_type;
-    std::cout << prime_type::n_th(10) << "\n";
-    std::cout << prime_type::size() << "\n";
+    prime_type::out_of_range_prime_queue();
 }
 
 int main(){

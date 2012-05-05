@@ -3,6 +3,8 @@
 
 #include <string>
 #include <ostream>
+#include <queue>
+#include <vector>
 #include <algorithm>
 #include <utility>
 #include <type_traits>
@@ -10,7 +12,7 @@
 #include <stdexcept>
 #include <cmath>
 #include <cassert>
-#include <limits.h>
+#include <climits>
 #include <boost/utility/enable_if.hpp>
 
 namespace cpp_multi_precision{
@@ -193,20 +195,170 @@ namespace cpp_multi_precision{
             bool value;
         };
 
+        template <class T, class Container = std::vector<T>, class Comp = std::greater<T>>
+        class random_access_priority_queue{
+        public:
+            random_access_priority_queue(){}
+
+            random_access_priority_queue(const Container& container){
+                container_ = container;
+                std::make_heap(container_.begin(), container_.end(), Comp());
+            }
+
+            random_access_priority_queue<T, Container, Comp> &operator =(
+                const random_access_priority_queue<T, Container, Comp> &other
+            ){
+                if(this != &other){ container_ = other.container_; }
+                return *this;
+            }
+
+            void push(const T &x){
+                container_.push_back(x);
+                std::push_heap(container_.begin(), container_.end(), Comp());
+            }
+
+            void pop(){
+                std::pop_heap(container_.begin(), container_.end(), Comp());
+                container_.pop_back();
+            }
+
+            const T &top(){
+                return container_.front();
+            }
+
+            const Container &get_container() const{
+                return container_;
+            }
+
+            T &operator [](size_t n){
+                return container_[n];
+            }
+
+            typename Container::const_iterator begin() const{
+                return container_.begin();
+            }
+
+            typename Container::const_iterator end() const{
+                return container_.end();
+            }
+
+            size_t size() const{
+                return container_.size();
+            }
+
+            T &base(){
+                return container_.back();
+            }
+
+            typename Container::iterator erase(typename Container::iterator position) {
+                return container_.erase(position);
+            }
+
+        private:
+            Container container_;
+        };
+
         template<class Type>
-        struct prime{
+        bool prime_div_test(Type n){
+            for(Type i = 3; i * i <= n; i += 2){
+                if(n % i == 0){ return false; }
+            }
+            return true;
+        }
+
+        template<class Type, std::size_t N = sizeof(Type) * 8>
+        struct prime;
+
+        template<class Type>
+        struct prime<Type, 32>{
             typedef Type value_type;
-            static value_type n_th(std::size_t n){
-                static const value_type table[] = {
+            typedef random_access_priority_queue<
+                value_type,
+                std::vector<value_type>,
+                std::greater<value_type>
+            > out_of_range_prime_queue_type;
+
+            static value_type table(std::size_t n){
+                static const value_type table_[] = {
 #include "prime32_262144.hpp"
                 };
-                struct size_init{ size_init(std::size_t n){ prime::size() = n; } };
-                static size_init init(sizeof(table) / sizeof(value_type));
+
+                struct init_type{
+                    init_type(std::size_t n, value_type begin, value_type end){
+                        prime::table_size() = n;
+                        prime::range_begin() = begin;
+                        prime::range_end() = end;
+                    }
+                };
+
+                static init_type init(
+                    sizeof(table_) / sizeof(value_type),
+                    table_[0],
+                    table_[sizeof(table_) / sizeof(value_type) - 1]
+                );
+
+                return table_[n];
+            }
+
+            static std::size_t &table_size(){
+                static std::size_t n;
+                return n;
+            }
+
+            static value_type &range_begin(){
+                static value_type n;
+                return n;
+            }
+
+            static value_type &range_end(){
+                static value_type n;
+                return n;
+            }
+
+            static out_of_range_prime_queue_type &out_of_range_prime_queue(){
+                static out_of_range_prime_queue_type queue;
+                return queue;
+            }
+        };
+
+        template<class Type>
+        struct prime<Type, 64>{
+            typedef Type value_type;
+
+            static value_type table(std::size_t n){
+                static const value_type table_[] = {
+#include "prime64_262144.hpp"
+                };
+
+                struct init_type{
+                    init_type(std::size_t n, value_type begin, value_type end){
+                        prime::table_size() = n;
+                        prime::range_begin() = begin;
+                        prime::range_end() = end;
+                    }
+                };
+
+                static init_type init(
+                    sizeof(table_) / sizeof(value_type),
+                    table_[0],
+                    table_[sizeof(table_) / sizeof(value_type) - 1]
+                );
+
                 return table[n];
             }
 
-            static std::size_t &size(){
+            static std::size_t &table_size(){
                 static std::size_t n;
+                return n;
+            }
+
+            static value_type &range_begin(){
+                static value_type n;
+                return n;
+            }
+
+            static value_type &range_end(){
+                static value_type n;
                 return n;
             }
         };
