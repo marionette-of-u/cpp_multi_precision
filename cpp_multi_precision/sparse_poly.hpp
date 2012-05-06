@@ -881,7 +881,7 @@ namespace cpp_multi_precision{
             {
                 sparse_poly rev_lhs;
                 sparse_poly::rev(rev_lhs, lhs);
-                sparse_poly::kar_multi(result, rev_lhs, inv_rev_rhs);
+                result = rev_lhs * inv_rev_rhs;
             }
             if(result.container.rbegin()->first >= m){
                 result.container.erase(result.container.find(m), result.container.end());
@@ -889,8 +889,7 @@ namespace cpp_multi_precision{
             result.rev();
             if(Rem){
                 rem.assign(lhs);
-                sparse_poly multi_result;
-                kar_multi(multi_result, rhs, result);
+                sparse_poly multi_result = rhs * result;
                 rem -= multi_result;
             }
             return result;
@@ -940,22 +939,19 @@ namespace cpp_multi_precision{
                 monic_div(q, r_0, r_1);
                 {
                     sparse_poly next_r(r_0);
-                    sparse_poly result_multi;
-                    next_r -= kar_multi(result_multi, q, r_1);
+                    next_r -= q * r_1;
                     r_0 = std::move(r_1);
                     r_1 = std::move(next_r);
                 }
                 {
                     sparse_poly next_s(s_0);
-                    sparse_poly result_multi;
-                    next_s -= kar_multi(result_multi, q, s_1);
+                    next_s -= q * s_1;
                     s_0 = std::move(s_1);
                     s_1 = std::move(next_s);
                 }
                 {
                     sparse_poly next_t(t_0);
-                    sparse_poly result_multi;
-                    next_t -= kar_multi(result_multi, q, t_1);
+                    next_t -= q * t_1;
                     t_0 = std::move(t_1);
                     t_1 = std::move(next_t);
                 }
@@ -991,15 +987,7 @@ namespace cpp_multi_precision{
                     coefficient_type coe_double_g(double_g_iter->second);
                     double_g_iter->second = coe_double_g * 2;
                 }
-                {
-                    sparse_poly f_g_square;
-                    {
-                        sparse_poly g_square;
-                        kar_multi(g_square, g, g);
-                        kar_multi(f_g_square, f, g_square);
-                    }
-                    next_g -= f_g_square;
-                }
+                next_g -= f * g * g;
                 if(next_g.container.rbegin()->first >= rem){
                     next_g.container.erase(next_g.container.find(rem), next_g.container.end());
                 }

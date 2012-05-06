@@ -13,26 +13,26 @@ namespace cpp_multi_precision{
 
     public:
         modular() :
-           value_(), modulus_(), modulus_1_5_()
+           value_(), modulus_(), modulus_threshold_()
         {}
 
        modular(const value_type &other_value) :
-           value_(other_value), modulus_(), modulus_1_5_()
+           value_(other_value), modulus_(), modulus_threshold_()
        {}
 
         modular(const value_type &other_value, const value_type &other_modulus) :
             value_(other_value), modulus_(other_modulus)
         {
-            set_modulus_1_5();
+            set_modulus_threshold();
             normalize();
         }
 
         modular(const modular &other) :
-            value_(other.value_), modulus_(other.modulus_), modulus_1_5_(other.modulus_1_5_)
+            value_(other.value_), modulus_(other.modulus_), modulus_threshold_(other.modulus_threshold_)
         { normalize(); }
 
         modular(modular &&other) :
-            value_(std::move(other.value_)), modulus_(std::move(other.modulus_)), modulus_1_5_(std::move(other.modulus_1_5_))
+            value_(std::move(other.value_)), modulus_(std::move(other.modulus_)), modulus_threshold_(std::move(other.modulus_threshold_))
         { normalize(); }
 
     public:
@@ -69,7 +69,7 @@ namespace cpp_multi_precision{
         }
 
         void normalize(){
-            if(value_ >= modulus_1_5_){
+            if(value_ >= modulus_threshold_){
                 force_normalize();
             }
         }
@@ -92,14 +92,14 @@ namespace cpp_multi_precision{
         modular &operator =(const modular &other){
             value_ = other.value_;
             modulus_ = other.modulus_;
-            modulus_1_5_ = other.modulus_1_5_;
+            modulus_threshold_ = other.modulus_threshold_;
             return *this;
         }
 
         modular &operator =(modular &&other){
             value_ = std::move(other.value_);
             modulus_ = std::move(other.modulus_);
-            modulus_1_5_ = std::move(other.modulus_1_5_);
+            modulus_threshold_ = std::move(other.modulus_threshold_);
             return *this;
         }
 
@@ -291,12 +291,11 @@ namespace cpp_multi_precision{
 
         void set_modulus(const value_type &x){
             modulus_ = x;
-            set_modulus_1_5();
+            set_modulus_threshold();
         }
 
-        void set_modulus_1_5(){
-            modulus_1_5_ = modulus_;
-            modulus_1_5_ += modulus_ / 2;
+        void set_modulus_threshold(){
+            modulus_threshold_ = modulus_ * 4;
         }
 
 #define CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_WSTRING template<class T, std::wstring (T::*Func)() const>
@@ -347,7 +346,7 @@ namespace cpp_multi_precision{
         }
 
     private:
-        value_type value_, modulus_, modulus_1_5_;
+        value_type value_, modulus_, modulus_threshold_;
     };
 
     template<class ValueType>

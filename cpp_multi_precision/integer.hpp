@@ -428,18 +428,15 @@ namespace cpp_multi_precision{
                 integer rhs(*m_iter), d, s, v(*v_iter), c_temp;
                 div(d, prod_m, rhs);
                 eea(integer(), s, integer(), d, rhs);
-                integer vs;
-                kar_multi(vs, s, v);
-                v = 0;
-                mod(c_temp, vs, rhs);
+                integer vs = s * v;
+                c_temp = vs * rhs;
                 if(!c_temp.sign){
                     unsigned_integer_type &u_temp(c_temp), urhs(rhs);
                     urhs -= u_temp;
                     u_temp.assign(urhs);
                     c_temp.sign = true;
                 }
-                kar_multi(v, c_temp, d);
-                c_sum += v;
+                c_sum += c_temp * d;
             }
             return result;
         }
@@ -603,22 +600,19 @@ namespace cpp_multi_precision{
                 div(q, r_0, r_1);
                 {
                     integer next_r(r_0);
-                    integer result_multi;
-                    next_r -= kar_multi(result_multi, q, r_1);
+                    next_r -= q * r_1;
                     r_0 = std::move(r_1);
                     r_1 = std::move(next_r);
                 }
                 {
                     integer next_s(s_0);
-                    integer result_multi;
-                    next_s -= kar_multi(result_multi, q, s_1);
+                    next_s -= q * s_1;
                     s_0 = std::move(s_1);
                     s_1 = std::move(next_s);
                 }
                 {
                     integer next_t(t_0);
-                    integer result_multi;
-                    next_t -= kar_multi(result_multi, q, t_1);
+                    next_t -= q * t_1;
                     t_0 = std::move(t_1);
                     t_1 = std::move(next_t);
                 }
