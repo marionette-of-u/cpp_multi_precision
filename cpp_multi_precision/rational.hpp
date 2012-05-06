@@ -28,15 +28,55 @@ namespace cpp_multi_precision{
         rational(integer_type &&num, const integer_type &den){ assign(num, den); }
         virtual ~rational(){}
 
-        void assign(const rational &other){ numerator.assign(other.numerator), denominator.assign(other.denominator), sign = other.sign; }
-        void assign(rational &&other){ numerator.assign(other.numerator), denominator.assign(other.denominator), assign_sign(), reduce(); }
-        void assign(radix_type num){ numerator.assign(num), denominator.assign(1), sign = true; }
-        void assign(const integer_type &other_integer){ numerator.assign(other_integer), denominator.assign(1), assign_sign(); }
-        void assign(integer_type &&other_integer){ numerator.assign(other_integer), denominator.assign(1), assign_sign(); }
-        void assign(const integer_type &num, const integer_type &den){ numerator.assign(num), denominator.assign(den), assign_sign(), reduce(); }
-        void assign(integer_type &&num, integer_type &&den){ numerator.assign(num), denominator.assign(den), assign_sign(), reduce(); }
-        void assign(const integer_type &num, integer_type &&den){ numerator.assign(num), denominator.assign(den), assign_sign(), reduce(); }
-        void assign(integer_type &&num, const integer_type &den){ numerator.assign(num), denominator.assign(den), assign_sign(), reduce(); }
+        void assign(const rational &other){
+            numerator = other.numerator, denominator = other.denominator;
+            sign = other.sign;
+        }
+
+        void assign(rational &&other){
+            numerator = other.numerator, denominator = other.denominator;
+            sign = std::move(other.sign);
+            reduce();
+        }
+
+        void assign(radix_type num){
+            numerator = num, denominator = 1;
+            sign = true;
+        }
+        
+        void assign(const integer_type &other_integer){
+            numerator = other_integer, denominator = 1;
+            sign = other_integer.sign;
+        }
+
+        void assign(integer_type &&other_integer){
+            numerator = other_integer, denominator = 1;
+            sign = std::move(other_integer.sign);
+        }
+
+        void assign(const integer_type &num, const integer_type &den){
+            numerator = num, denominator = den;
+            sign = num.sign == den.sign;
+            reduce();
+        }
+
+        void assign(integer_type &&num, integer_type &&den){
+            numerator = num, denominator = den;
+            sign = num.sign == den.sign;
+            reduce();
+        }
+
+        void assign(const integer_type &num, integer_type &&den){
+            numerator.assign(num), denominator.assign(den);
+            sign = num.sign == den.sign;
+            reduce();
+        }
+
+        void assign(integer_type &&num, const integer_type &den){
+            numerator.assign(num), denominator.assign(den);
+            sign = num.sign == den.sign;
+            reduce();
+        }
 
         rational &operator =(const rational &other){
             assign(other);
@@ -217,11 +257,6 @@ namespace cpp_multi_precision{
             numerator.assign(q);
             integer_type::div(q, denominator, gcd);
             denominator.assign(q);
-        }
-
-        void assign_sign(){
-            sign = numerator.sign == denominator.sign;
-            numerator.sign = denominator.sign = true;
         }
 
         template<class Str, class Char, class IntegerToString>

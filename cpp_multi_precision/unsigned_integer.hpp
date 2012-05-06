@@ -220,18 +220,14 @@ namespace cpp_multi_precision{
         static unsigned_integer &normal(unsigned_integer &result, const unsigned_integer &x){
             result.container = x.container;
             const radix_type &lc_value(x.lc());
-            for(typename container_type::iterator iter = result.container.begin(), end = result.container.end(); iter != end; ++iter){
-                *iter /= lc_value;
-            }
+            result /= lc_value;
             return result;
         }
 
         void normalize(){
-            if(container.size() == 0){ return; }
-            radix_type lc_value(lc());
-            for(typename container_type::iterator iter = container.begin(), end = container.end(); iter != end; ++iter){
-                *iter /= lc_value;
-            }
+            unsigned_integer r(*this);
+            normal(r, *this);
+            *this = std::move(r);
         }
 
         radix_type infinity_norm() const{

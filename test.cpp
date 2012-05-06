@@ -82,7 +82,7 @@ void test_sparse_poly(){
     > rational;
 
     // 上記の二つをあわせて疎な多項式型を作る
-    typedef cpp_multi_precision::sparse_poly<integer, rational> sparse_poly;
+    typedef cpp_multi_precision::sparse_poly<integer, rational, false> sparse_poly;
 
     std::cout << "start test_sparse_poly\n";
 
@@ -308,13 +308,14 @@ void test_modular_and_poly(){
         std::vector<unsigned int>
     > integer;
 
-    typedef cpp_multi_precision::sparse_poly<integer, integer> sparse_poly;
+    typedef cpp_multi_precision::sparse_poly<integer, integer, true> sparse_poly;
     typedef cpp_multi_precision::modular<sparse_poly> modular;
     
     std::cout << "start test_modular_and_poly\n";
 
-    sparse_poly a, c, modulus;
+    sparse_poly a, b, c, modulus;
 
+    c = 0;
     c [10](-10) [5](5) [0](-20);
     std::cout << "infinity_norm(" << c << ") = " << c.infinity_norm() << "\n";
 

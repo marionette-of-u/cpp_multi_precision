@@ -1,4 +1,4 @@
-﻿#ifndef HPP_CPP_MULTI_PRECISION_INTEGER
+#ifndef HPP_CPP_MULTI_PRECISION_INTEGER
 #define HPP_CPP_MULTI_PRECISION_INTEGER
 
 #include "unsigned_integer.hpp"
@@ -344,6 +344,10 @@ namespace cpp_multi_precision{
     private:
         template<bool Rem>
         static integer &div_impl(integer &result, integer &rem, const integer &lhs, const integer &rhs){
+            if(lhs == 0){
+                result = 0, rem = 0;
+                return result;
+            }
             monic_div_impl<Rem>(result, rem, lhs, rhs);
             if(static_cast<unsigned_integer_type&>(result) == 0){
                 result.sign = true;
@@ -407,14 +411,6 @@ namespace cpp_multi_precision{
             }
         }
 
-        static integer &eea(integer &result, integer &c_lhs, integer &c_rhs, const integer &lhs, const integer &rhs){
-            if(lhs >= rhs){
-                return eea_impl(result, c_lhs, c_rhs, lhs, rhs);
-            }else{
-                return eea_impl(result, c_rhs, c_lhs, rhs, lhs);
-            }
-        }
-
         template<class MContainer, class VContainer>
         static integer &cra(integer &result, const MContainer &m_container, const VContainer& v_container){
             integer prod_m(1), &c_sum(result);
@@ -444,6 +440,10 @@ namespace cpp_multi_precision{
         radix_type lc() const{ return unsigned_integer_type::lc(); }
 
         static integer &normal(integer &result, const integer &x){
+            if(x == 0){
+                result = 0;
+                return result;
+            }
             unsigned_integer_type::normal(result, x);
             result.sign = true;
             return result;
@@ -584,42 +584,6 @@ namespace cpp_multi_precision{
         static integer &gcd_impl(integer &result, const integer &lhs, const integer &rhs){
             unsigned_integer_type::gcd_impl(result, lhs, rhs);
             result.sign = true;
-            return result;
-        }
-        
-        static integer &eea_impl(integer &result, integer &c_lhs, integer &c_rhs, const integer &lhs, const integer &rhs){
-            if(rhs == 0){
-                result.assign(0);
-                c_lhs.assign(0);
-                c_rhs.assign(0);
-                return result;
-            }
-            integer r_0(rhs), r_1(lhs), s_0(1), s_1(0), t_0(0), t_1(1);
-            while(r_1 != 0){
-                integer q;
-                div(q, r_0, r_1);
-                {
-                    integer next_r(r_0);
-                    next_r -= q * r_1;
-                    r_0 = std::move(r_1);
-                    r_1 = std::move(next_r);
-                }
-                {
-                    integer next_s(s_0);
-                    next_s -= q * s_1;
-                    s_0 = std::move(s_1);
-                    s_1 = std::move(next_s);
-                }
-                {
-                    integer next_t(t_0);
-                    next_t -= q * t_1;
-                    t_0 = std::move(t_1);
-                    t_1 = std::move(next_t);
-                }
-            }
-            result = std::move(r_0);
-            c_lhs = std::move(s_0);
-            c_rhs = std::move(t_0);
             return result;
         }
 

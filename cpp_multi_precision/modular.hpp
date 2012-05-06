@@ -301,12 +301,12 @@ namespace cpp_multi_precision{
 #define CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_WSTRING template<class T, std::wstring (T::*Func)() const>
         CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_wstring, CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_WSTRING);
         template<class T>
-        static std::wstring to_wstring_dispatch(const T &value, typename boost::enable_if<has_to_wstring<T>>::type* = 0){
+        static std::wstring to_wstring_dispatch(const T &value, typename boost::enable_if<has_to_wstring<T>>::type* = nullptr){
             return value.to_wstring();
         }
 
         template<class T>
-        static std::wstring to_wstring_dispatch(const T &value, typename boost::disable_if<has_to_wstring<T>>::type* = 0){
+        static std::wstring to_wstring_dispatch(const T &value, typename boost::disable_if<has_to_wstring<T>>::type* = nullptr){
             std::wostringstream os;
             os << value;
             return os.str();
@@ -319,7 +319,7 @@ namespace cpp_multi_precision{
             T &result,
             const T &x,
             const T &y,
-            typename boost::enable_if<has_pow_mod<typename T::value_type>>::type* = 0
+            typename boost::enable_if<has_pow_mod<typename T::value_type>>::type* = nullptr
         ){
             T::value_type::pow_mod(result.value_, x.value_, y.value_, x.modulus_);
             return result;
@@ -330,7 +330,7 @@ namespace cpp_multi_precision{
             T &result,
             const T &x,
             const T &y,
-            typename boost::disable_if<has_pow_mod<typename T::value_type>>::type* = 0
+            typename boost::disable_if<has_pow_mod<typename T::value_type>>::type* = nullptr
         ){
             std::size_t k = sizeof(T) * 8;
             result.value_ = x.value_;
