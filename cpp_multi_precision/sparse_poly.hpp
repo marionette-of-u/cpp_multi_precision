@@ -10,7 +10,7 @@ namespace cpp_multi_precision{
     template<
         class OrderType,
         class CoefficientType,
-        bool CoefficientIsIntegral = std::is_integral<CoefficientType>::value,
+        bool CommutativeRing = std::is_integral<CoefficientType>::value,
         class Alloc = std::allocator<int>
     > class sparse_poly{
         class container_type : public std::map<
@@ -116,6 +116,7 @@ namespace cpp_multi_precision{
     public:
         typedef typename container_type::key_type order_type;
         typedef typename container_type::mapped_type coefficient_type;
+        static const bool commutative_ring = CommutativeRing;
 
         sparse_poly() : container(){}
         sparse_poly(const sparse_poly &other) : container(other.container){}
@@ -865,7 +866,7 @@ namespace cpp_multi_precision{
 
         template<bool Rem>
         static sparse_poly &monic_div_impl(sparse_poly &result, sparse_poly &rem, const sparse_poly &lhs, const sparse_poly &rhs){
-            if(!CoefficientIsIntegral || !rhs.is_monic()){
+            if(!commutative_ring || !rhs.is_monic()){
                 return square_div(result, rem, lhs, rhs);
             }
             result.container.clear();
@@ -875,33 +876,31 @@ namespace cpp_multi_precision{
             }
             order_type m(lhs.container.rbegin()->first);
             m -= rhs.container.rbegin()->first;
-            m += 1;
             sparse_poly inv_rev_rhs;
             {
                 sparse_poly rev_rhs;
                 sparse_poly::rev(rev_rhs, rhs);
-                sparse_poly::inverse(inv_rev_rhs, rev_rhs, m);
+                sparse_poly::inverse(inv_rev_rhs, rev_rhs, m + 1);
             }
             {
                 sparse_poly rev_lhs;
                 sparse_poly::rev(rev_lhs, lhs);
                 result = rev_lhs * inv_rev_rhs;
             }
-            if(result.container.rbegin()->first >= m){
-                result.container.erase(result.container.find(m), result.container.end());
-            }
-            result.rev();
-            if(Rem){
-                rem.assign(lhs);
-                sparse_poly multi_result = rhs * result;
-                rem -= multi_result;
-            }
+            result.container.erase(result.container.upper_bound(m), result.container.end());
+            result.rev(m);
+            if(Rem){ rem = lhs - rhs * result; }
             return result;
         }
 
         static void rev(sparse_poly &result, const sparse_poly &a){
-            const order_type order(a.container.rbegin()->first);
-            for(typename container_type::const_reverse_iterator iter = a.container.rbegin(), end = a.container.rend(); iter != end; ++iter){
+            result.container.clear();
+            const order_type &order(a.container.rbegin()->first);
+            for(
+                typename container_type::const_reverse_iterator iter = a.container.rbegin(),
+                end = a.container.rend();
+                iter != end; ++iter
+            ){
                 order_type x(order);
                 x -= iter->first;
                 result.container.insert(std::make_pair(std::move(x), iter->second));
@@ -912,6 +911,27 @@ namespace cpp_multi_precision{
             sparse_poly result;
             rev(result, *this);
             assign(std::move(result));
+        }
+
+        void rev(const order_type &n){
+            if(container.find(n) != container.end()){
+                sparse_poly result;
+                rev(result, *this);
+                assign(std::move(result));
+            }else{
+                sparse_poly result;
+                container.insert(std::make_pair(n, 0));
+                for(
+                    typename container_type::const_iterator iter = container.begin(), end = container.lower_bound(n);
+                    iter != end;
+                    ++iter
+                ){
+                    order_type x(n);
+                    x -= iter->first;
+                    result.container.insert(std::make_pair(std::move(x), iter->second));
+                }
+                assign(std::move(result));
+            }
         }
 
         static sparse_poly &gcd_default_impl(sparse_poly &result, sparse_poly lhs, sparse_poly rhs){
@@ -946,7 +966,7 @@ namespace cpp_multi_precision{
             }
             sparse_poly r_0, r_1, s_0 = 1 / lhs.lc(), s_1 = coefficient_type(0), t_0 = coefficient_type(0), t_1 = 1 / rhs.lc();
             normal(r_0, lhs), normal(r_1, rhs);
-            for(int i = 1; !r_1.container.empty(); ++i){
+            for(; !r_1.container.empty(); ){
                 sparse_poly q = r_0 / r_1, rho = r_0 - q * r_1, r_m = r_1, s_m = s_1, t_m = t_1;
                 rho.lu();
                 r_1 = (r_0 - q * r_1) / rho;
@@ -957,8 +977,8 @@ namespace cpp_multi_precision{
                 t_0 = std::move(t_m);
             }
             result = std::move(r_0);
-            c_lhs = std::move(s_1);
-            c_rhs = std::move(t_1);
+            c_lhs = std::move(s_0);
+            c_rhs = std::move(t_0);
             return result;
         }
 
