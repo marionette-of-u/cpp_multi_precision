@@ -13,69 +13,76 @@ namespace cpp_multi_precision{
 
     public:
         modular() :
-           value_(), modulus_(), modulus_threshold_()
+           value_(), modulus_(), modulus_count(0)
         {}
 
        modular(const value_type &other_value) :
-           value_(other_value), modulus_(), modulus_threshold_()
-       {}
+           value_(other_value), modulus_(other_value.modulus_)
+       { force_normalize(); }
 
         modular(const value_type &other_value, const value_type &other_modulus) :
             value_(other_value), modulus_(other_modulus)
-        {
-            set_modulus_threshold();
-            normalize();
-        }
+        { force_normalize(); }
 
         modular(const modular &other) :
-            value_(other.value_), modulus_(other.modulus_), modulus_threshold_(other.modulus_threshold_)
-        { normalize(); }
+            value_(other.value_), modulus_(other.modulus_)
+        { force_normalize(); }
 
         modular(modular &&other) :
-            value_(std::move(other.value_)), modulus_(std::move(other.modulus_)), modulus_threshold_(std::move(other.modulus_threshold_))
-        { normalize(); }
+            value_(std::move(other.value_)), modulus_(std::move(other.modulus_))
+        { force_normalize(); }
 
     public:
         std::string to_string() const{
+            modular a = *this;
             std::string r;
             {
                 std::ostringstream os;
-                os << value_;
+                os << a.value_;
                 r += os.str();
             }
             r += " mod ";
             {
                 std::ostringstream os;
-                os << modulus_;
+                os << a.modulus_;
                 r += os.str();
             }
             return r;
         }
 
         std::wstring to_wstring() const{
+            modular a = *this;
             std::wstring r;
             {
                 std::wostringstream os;
-                os << value_;
+                os << a.value_;
                 r += os.str();
             }
             r += L" mod ";
             {
                 std::wostringstream os;
-                os << modulus_;
+                os << a.modulus_;
                 r += os.str();
             }
             return r;
         }
 
+        void set_modulus(const value_type &value){
+            modulus_ = value;
+            force_normalize();
+        }
+
         void normalize(){
-            if(value_ >= modulus_threshold_){
+            if(modulus_count < threshold_modulus){
+                ++modulus_count;
+            }else{
                 force_normalize();
             }
         }
 
         void force_normalize(){
             value_ = value_ % modulus_;
+            modulus_count = 0;
         }
 
         static modular &pow(modular &result, const modular &x, const modular &y){
@@ -92,14 +99,14 @@ namespace cpp_multi_precision{
         modular &operator =(const modular &other){
             value_ = other.value_;
             modulus_ = other.modulus_;
-            modulus_threshold_ = other.modulus_threshold_;
+            modulus_count = other.modulus_count;
             return *this;
         }
 
         modular &operator =(modular &&other){
             value_ = std::move(other.value_);
             modulus_ = std::move(other.modulus_);
-            modulus_threshold_ = std::move(other.modulus_threshold_);
+            modulus_count = other.modulus_count;
             return *this;
         }
 
@@ -289,15 +296,6 @@ namespace cpp_multi_precision{
             value_ = -value_;
         }
 
-        void set_modulus(const value_type &x){
-            modulus_ = x;
-            set_modulus_threshold();
-        }
-
-        void set_modulus_threshold(){
-            modulus_threshold_ = modulus_ * 4;
-        }
-
 #define CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_WSTRING template<class T, std::wstring (T::*Func)() const>
         CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_wstring, CPP_MULTI_PRECISION_SIGUNATURE_MODULAR_TO_WSTRING);
         template<class T>
@@ -346,7 +344,9 @@ namespace cpp_multi_precision{
         }
 
     private:
-        value_type value_, modulus_, modulus_threshold_;
+        static const std::size_t threshold_modulus = 4;
+        value_type value_, modulus_;
+        std::size_t modulus_count;
     };
 
     template<class ValueType>

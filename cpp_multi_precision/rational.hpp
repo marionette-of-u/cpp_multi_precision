@@ -16,16 +16,38 @@ namespace cpp_multi_precision{
         typedef typename aux::rebind_container<Container>::template rebind<radix_type, Allocator>::other container_type;
         typedef integer<RadixType, RadixLog2, Radix2Type, URadix2Type, Container, Allocator> integer_type;
 
-        rational() : numerator(0), denominator(1){}
-        rational(const rational &other){ assign(other); }
-        rational(rational &&other){ assign(other); }
-        rational(radix_type num){ assign(num); }
-        rational(const integer_type &other_integer){ assign(other_integer); }
-        rational(integer_type &&other_integer){ assign(other_integer); }
-        rational(const integer_type &num, const integer_type &den){ assign(num, den); }
-        rational(integer_type &&num, integer_type &&den){ assign(num, den); }
-        rational(const integer_type &num, integer_type &&den){ assign(num, den); }
-        rational(integer_type &&num, const integer_type &den){ assign(num, den); }
+        rational() :
+            numerator(0),
+            denominator(1)
+        {}
+
+        rational(const rational &other)
+        { assign(other); }
+
+        rational(rational &&other)
+        { assign(other); }
+
+        rational(radix_type num)
+        { assign(num); }
+
+        rational(const integer_type &other_integer)
+        { assign(other_integer); }
+
+        rational(integer_type &&other_integer)
+        { assign(other_integer); }
+
+        rational(const integer_type &num, const integer_type &den)
+        { assign(num, den); }
+
+        rational(integer_type &&num, integer_type &&den)
+        { assign(num, den); }
+
+        rational(const integer_type &num, integer_type &&den)
+        { assign(num, den); }
+
+        rational(integer_type &&num, const integer_type &den)
+        { assign(num, den); }
+        
         virtual ~rational(){}
 
         void assign(const rational &other){
@@ -67,13 +89,13 @@ namespace cpp_multi_precision{
         }
 
         void assign(const integer_type &num, integer_type &&den){
-            numerator.assign(num), denominator.assign(den);
+            numerator = num, denominator = den;
             sign = num.sign == den.sign;
             reduce();
         }
 
         void assign(integer_type &&num, const integer_type &den){
-            numerator.assign(num), denominator.assign(den);
+            numerator = num, denominator = den;
             sign = num.sign == den.sign;
             reduce();
         }
@@ -89,15 +111,14 @@ namespace cpp_multi_precision{
         }
 
         rational &operator +=(const rational &rhs){
-            integer_type a;
-            integer_type::kar_multi(a, numerator, rhs.denominator);
-            numerator.assign(a);
-            integer_type::kar_multi(a, rhs.numerator, denominator);
-            numerator.sign = sign;
-            a.sign = rhs.sign;
-            numerator += a;
-            integer_type::kar_multi(a, denominator, rhs.denominator);
-            denominator.assign(a);
+            numerator = numerator * rhs.denominator;
+            {
+                integer_type a = rhs.numerator * denominator;
+                numerator.sign = sign;
+                a.sign = rhs.sign;
+                numerator += a;
+            }
+            denominator = denominator * rhs.denominator;
             sign = numerator.sign;
             numerator.sign = true;
             if(numerator == 0){
@@ -116,15 +137,14 @@ namespace cpp_multi_precision{
         }
 
         rational &operator -=(const rational &rhs){
-            integer_type a;
-            integer_type::kar_multi(a, numerator, rhs.denominator);
-            numerator.assign(a);
-            integer_type::kar_multi(a, rhs.numerator, denominator);
-            numerator.sign = sign;
-            a.sign = rhs.sign;
-            numerator -= a;
-            integer_type::kar_multi(a, denominator, rhs.denominator);
-            denominator.assign(a);
+            numerator = numerator * rhs.denominator;
+            {
+                integer_type a = rhs.numerator * denominator;
+                numerator.sign = sign;
+                a.sign = rhs.sign;
+                numerator -= a;
+            }
+            denominator = denominator * rhs.denominator;
             sign = numerator.sign;
             numerator.sign = true;
             if(numerator == 0){
@@ -199,8 +219,17 @@ namespace cpp_multi_precision{
         bool operator ==(const rational &rhs) const{ return numerator == rhs.numerator && denominator == rhs.denominator; }
         bool operator !=(const rational &rhs) const{ return numerator != rhs.numerator || denominator != rhs.denominator; }
 
-        std::string to_string() const{ return to_string_impl<std::string, char>('0', '-', '/', &integer_type::to_string); }
-        std::wstring to_wstring() const{ return to_string_impl<std::wstring, wchar_t>(L'0', L'-', L'/', &integer_type::to_wstring); }
+        std::string to_string() const{
+            rational a = *this;
+            a.reduce();
+            return a.to_string_impl<std::string, char>('0', '-', '/', &integer_type::to_string);
+        }
+        
+        std::wstring to_wstring() const{
+            rational a = *this;
+            a.reduce();
+            return a.to_string_impl<std::wstring, wchar_t>(L'0', L'-', L'/', &integer_type::to_wstring);
+        }
 
         static rational &multi(rational &result, const rational &lhs, const rational &rhs){
             integer_type::kar_multi(result.numerator, lhs.numerator, rhs.numerator);
@@ -228,8 +257,8 @@ namespace cpp_multi_precision{
 
         void inverse(){
             integer_type temp(numerator);
-            numerator.assign(denominator);
-            denominator.assign(temp);
+            numerator = denominator;
+            denominator = std::move(temp);
         }
 
         void radix_shift(std::size_t n){
@@ -237,7 +266,8 @@ namespace cpp_multi_precision{
             reduce();
         }
 
-        std::size_t deg() const{
+        std::size_t deg(){
+            reduce();
             return numerator.deg() - denominator.deg();
         }
 
@@ -245,18 +275,23 @@ namespace cpp_multi_precision{
             return rational(numerator.lc(), denominator.lc());
         }
 
-        const integer_type &get_numerator() const{ return numerator; }
-        const integer_type &get_denominator() const{ return denominator; }
+        const integer_type &get_numerator(){
+            reduce();
+            return numerator;
+        }
+
+        const integer_type &get_denominator(){
+            reduce();
+            return denominator;
+        }
 
     private:
         void reduce(){
             if(numerator == 0){ denominator = 1; return; }
-            integer_type gcd, q;
+            integer_type gcd;
             integer_type::gcd(gcd, numerator, denominator);
-            integer_type::div(q, numerator, gcd);
-            numerator.assign(q);
-            integer_type::div(q, denominator, gcd);
-            denominator.assign(q);
+            numerator = numerator / gcd;
+            denominator = denominator / gcd;
         }
 
         template<class Str, class Char, class IntegerToString>
@@ -272,6 +307,7 @@ namespace cpp_multi_precision{
         }
 
     private:
+        static const std::size_t threshold_reduce_count = 0;
         integer_type numerator, denominator;
 
     public:
