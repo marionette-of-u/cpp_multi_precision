@@ -436,61 +436,8 @@ namespace cpp_multi_precision{
             return ret;
         }
 
-        static sparse_poly &square_multi(sparse_poly &result, const sparse_poly &lhs, const sparse_poly &rhs){
-            square_multi_impl(result, lhs.container.begin(), lhs.container.end(), rhs.container.begin(), rhs.container.end());
-            return result;
-        }
-
         static sparse_poly &kar_multi(sparse_poly &result, const sparse_poly &lhs, const sparse_poly &rhs){
             return result = kar_multi_impl_n(lhs, rhs);
-        }
-
-        static sparse_poly &square_div(sparse_poly &result, sparse_poly &rem, const sparse_poly &lhs, const sparse_poly &rhs){
-            rem = lhs;
-            result = 0;
-            const order_type &rhs_order(rhs.container.rbegin()->first);
-            const coefficient_type &rhs_coe(rhs.container.rbegin()->second);
-            for(; !rem.container.empty(); ){
-                const order_type &rem_order(rem.container.rbegin()->first);
-                const coefficient_type &rem_coe(rem.container.rbegin()->second);
-                if(rem_order >= rhs_order){
-                    order_type n = rem_order;
-                    n -= rhs_order;
-                    coefficient_type q = rem_coe / rhs_coe;
-                    if(q == 0){
-                        break;
-                    }
-                    rem.sub_n_q(rhs, n, q);
-                    result.addition_order_coe(n, q);
-                }else{ break; }
-            }
-            return result;
-        }
-
-        static sparse_poly &square_div(sparse_poly &result, const sparse_poly &lhs, const sparse_poly &rhs){
-            sparse_poly rem;
-            return square_div(result, rem, lhs, rhs);
-        }
-
-        static sparse_poly &square_mod(sparse_poly &rem, const sparse_poly &lhs, const sparse_poly &rhs){
-            sparse_poly result;
-            square_div(result, rem, lhs, rhs);
-            return rem;
-        }
-
-        static sparse_poly &monic_div(sparse_poly &result, sparse_poly &rem, const sparse_poly &lhs, const sparse_poly &rhs){
-            return monic_div_impl<true>(result, rem, lhs, rhs);
-        }
-        
-        static sparse_poly &monic_div(sparse_poly &result, const sparse_poly &lhs, const sparse_poly &rhs){
-            sparse_poly rem;
-            return monic_div_impl<false>(result, rem, lhs, rhs);
-        }
-
-        static sparse_poly &monic_mod(sparse_poly &rem, const sparse_poly &lhs, const sparse_poly &rhs){
-            sparse_poly result;
-            monic_div_impl<true>(result, rem, lhs, rhs);
-            return rem;
         }
 
         static sparse_poly &eea(sparse_poly &result, sparse_poly &c_lhs, sparse_poly &c_rhs, const sparse_poly &lhs, const sparse_poly &rhs){
@@ -678,6 +625,59 @@ namespace cpp_multi_precision{
             }else{
                 if(x > 0){ x = -x; }
             }
+        }
+
+        static sparse_poly &square_multi(sparse_poly &result, const sparse_poly &lhs, const sparse_poly &rhs){
+            square_multi_impl(result, lhs.container.begin(), lhs.container.end(), rhs.container.begin(), rhs.container.end());
+            return result;
+        }
+
+        static sparse_poly &square_div(sparse_poly &result, sparse_poly &rem, const sparse_poly &lhs, const sparse_poly &rhs){
+            rem = lhs;
+            result = 0;
+            const order_type &rhs_order(rhs.container.rbegin()->first);
+            const coefficient_type &rhs_coe(rhs.container.rbegin()->second);
+            for(; !rem.container.empty(); ){
+                const order_type &rem_order(rem.container.rbegin()->first);
+                const coefficient_type &rem_coe(rem.container.rbegin()->second);
+                if(rem_order >= rhs_order){
+                    order_type n = rem_order;
+                    n -= rhs_order;
+                    coefficient_type q = rem_coe / rhs_coe;
+                    if(q == 0){
+                        break;
+                    }
+                    rem.sub_n_q(rhs, n, q);
+                    result.addition_order_coe(n, q);
+                }else{ break; }
+            }
+            return result;
+        }
+
+        static sparse_poly &square_div(sparse_poly &result, const sparse_poly &lhs, const sparse_poly &rhs){
+            sparse_poly rem;
+            return square_div(result, rem, lhs, rhs);
+        }
+
+        static sparse_poly &square_mod(sparse_poly &rem, const sparse_poly &lhs, const sparse_poly &rhs){
+            sparse_poly result;
+            square_div(result, rem, lhs, rhs);
+            return rem;
+        }
+
+        static sparse_poly &monic_div(sparse_poly &result, sparse_poly &rem, const sparse_poly &lhs, const sparse_poly &rhs){
+            return monic_div_impl<true>(result, rem, lhs, rhs);
+        }
+        
+        static sparse_poly &monic_div(sparse_poly &result, const sparse_poly &lhs, const sparse_poly &rhs){
+            sparse_poly rem;
+            return monic_div_impl<false>(result, rem, lhs, rhs);
+        }
+
+        static sparse_poly &monic_mod(sparse_poly &rem, const sparse_poly &lhs, const sparse_poly &rhs){
+            sparse_poly result;
+            monic_div_impl<true>(result, rem, lhs, rhs);
+            return rem;
         }
 
         bool base_less_eq(bool final, const container_type &rhs_container) const{

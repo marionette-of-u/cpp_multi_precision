@@ -85,12 +85,6 @@ void test_sparse_poly(){
     typedef cpp_multi_precision::sparse_poly<integer, rational, true> sparse_poly;
 
     std::cout << "start test_sparse_poly\n";
-    
-    //sparse_poly a, b;
-    //a [3](1) [2](rational(-7, 3)) [1](rational(5, 3)) [0](rational(-1, 3));
-    //b [2](1) [1](rational(-5, 6)) [0](rational(1, 6));
-
-    //std::cout << a / b << "\n";
 
     sparse_poly poly_a, poly_b, poly_c, poly_r, poly_cl, poly_cr;
     // a += 18 * x^3
