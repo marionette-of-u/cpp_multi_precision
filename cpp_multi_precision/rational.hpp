@@ -307,7 +307,6 @@ namespace cpp_multi_precision{
         }
 
     private:
-        static const std::size_t threshold_reduce_count = 0;
         integer_type numerator, denominator;
 
     public:

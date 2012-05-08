@@ -17,20 +17,20 @@ namespace cpp_multi_precision{
         {}
 
        modular(const value_type &other_value) :
-           value_(other_value), modulus_(other_value.modulus_)
-       { force_normalize(); }
+           value_(other_value), modulus_(), modulus_count(0)
+       {}
 
         modular(const value_type &other_value, const value_type &other_modulus) :
-            value_(other_value), modulus_(other_modulus)
-        { force_normalize(); }
+            value_(other_value), modulus_(other_modulus), modulus_count(0)
+        {}
 
         modular(const modular &other) :
-            value_(other.value_), modulus_(other.modulus_)
-        { force_normalize(); }
+            value_(other.value_), modulus_(other.modulus_), modulus_count(other.modulus_count)
+        {}
 
         modular(modular &&other) :
-            value_(std::move(other.value_)), modulus_(std::move(other.modulus_))
-        { force_normalize(); }
+            value_(std::move(other.value_)), modulus_(std::move(other.modulus_)), modulus_count(other.modulus_count)
+        {}
 
     public:
         std::string to_string() const{
