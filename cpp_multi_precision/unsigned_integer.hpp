@@ -221,10 +221,10 @@ namespace cpp_multi_precision{
             return result;
         }
 
-        void normalize(){
+        unsigned_integer normalize(){
             unsigned_integer r(*this);
             normal(r, *this);
-            *this = std::move(r);
+            return std::move(r);
         }
 
         radix_type infinity_norm() const{
@@ -289,9 +289,10 @@ namespace cpp_multi_precision{
             return result;
         }
 
-        void ceil_pow2(){
-            unsigned_integer a(std::move(*this));
-            ceil_pow2(*this, std::move(a));
+        unsigned_integer ceil_pow2() const{
+            unsigned_integer a;
+            ceil_pow2(a, *this);
+            return std::move(a);
         }
 
         std::size_t ceil_log2() const{
@@ -328,7 +329,7 @@ namespace cpp_multi_precision{
             return pow_impl<unsigned_integer>(result, x, y, square_multi);
         }
 
-        static unsigned_integer &root(unsigned_integer &result, const unsigned_integer &a){
+        static unsigned_integer &sqrt(unsigned_integer &result, const unsigned_integer &a){
             result = a >> 1;
             unsigned_integer prev_x = result;
             do{

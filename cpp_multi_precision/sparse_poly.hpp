@@ -451,6 +451,12 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        static sparse_poly eea(sparse_poly &c_lhs, sparse_poly &c_rhs, const sparse_poly &lhs, const sparse_poly &rhs){
+            sparse_poly r;
+            eea(r, c_lhs, c_rhs, lhs, rhs);
+            return std::move(r);
+        }
+
         static sparse_poly &eea_classic(
             sparse_poly &result,
             sparse_poly &c_lhs,
@@ -466,7 +472,14 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        static sparse_poly eea_classic(sparse_poly &c_lhs, sparse_poly &c_rhs, const sparse_poly &f, const sparse_poly &g){
+            sparse_poly r;
+            eea_classic(r, c_lhs, c_rhs, f, g);
+            return std::move(r);
+        }
+
         const order_type &deg() const{ return container.rbegin()->first; }
+
         const coefficient_type &lc() const{ return container.rbegin()->second; }
 
         static sparse_poly &normal(sparse_poly &result, const sparse_poly &x){
@@ -479,18 +492,23 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        sparse_poly normal() const{
+            sparse_poly r;
+            normal(r, *this);
+            return std::move(r);
+        }
+
         void normalize(){
             sparse_poly r(*this);
             normal(r, *this);
             *this = std::move(r);
         }
 
-        void lu(){
-            if(container.empty()){
-                container.insert(typename container_type::value_type(0, 1));
-                return;
-            }
-            *this = sparse_poly(lc());
+        sparse_poly lu() const{
+            if(container.empty()){ return coefficient_type(1); }
+            sparse_poly na;
+            normal(na, *this);
+            return *this / na;
         }
 
         coefficient_type infinity_norm() const{
@@ -524,6 +542,12 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        sparse_poly pp() const{
+            sparse_poly r;
+            pp(r, *this);
+            return std::move(r);
+        }
+
         static sparse_poly &inverse(sparse_poly &result, const sparse_poly &f, const order_type &l){
             result.container.clear();
             sparse_poly &g(result);
@@ -544,6 +568,12 @@ namespace cpp_multi_precision{
                 g = std::move(next_g);
             }
             return result;
+        }
+
+        sparse_poly inverse(const order_type &l) const{
+            sparse_poly r;
+            inverse(r, *this, l);
+            return std::move(r);
         }
 
         static sparse_poly &modular_inverse(sparse_poly &result, const sparse_poly &a, const coefficient_type &m){
@@ -583,6 +613,12 @@ namespace cpp_multi_precision{
             }else{
                 return gcd_default_impl(result, g, f);
             }
+        }
+
+        static sparse_poly gcd(const sparse_poly &f, const sparse_poly &g){
+            sparse_poly r;
+            gcd(r, f, g);
+            std::move(r);
         }
 
         template<class MContainer, class VContainer>
@@ -633,7 +669,7 @@ namespace cpp_multi_precision{
 
         template<class T>
         static double to_double_dispatch(const T &a, typename boost::disable_if<has_to_double<T>>::type* = nullptr){
-            return double(a);
+            return static_cast<double>(a);
         }
 
 #define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_UNSIGNED_INT template<class T, unsigned int (T::*Func)() const>
@@ -662,15 +698,15 @@ namespace cpp_multi_precision{
             return result;
         }
 
-#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ROOT template<class T, T &(Func)(T&, const T&)>
-        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(root, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ROOT);
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_SQRT template<class T, T &(Func)(T&, const T&)>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(sqrt, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_SQRT);
         template<class T>
-        static T &root_dispatch(T &result, const T &a, typename boost::enable_if<has_root<T>>::type* = nullptr){
-            return T::root(result, a);
+        static T &root_dispatch(T &result, const T &a, typename boost::enable_if<has_sqrt<T>>::type* = nullptr){
+            return T::sqrt(result, a);
         }
 
         template<class T>
-        static T &root_dispatch(T &result, const T &a, typename boost::disable_if<has_root<T>>::type* = nullptr){
+        static T &root_dispatch(T &result, const T &a, typename boost::disable_if<has_sqrt<T>>::type* = nullptr){
             result = a / T(2);
             T prev_x = result;
             do{
@@ -724,12 +760,11 @@ namespace cpp_multi_precision{
             a = (std::max)(std::abs(a), std::abs(b));
         }
 
-#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_CEIL_POW2 template<class T, void (T::*Func)()>
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_CEIL_POW2 template<class T, T (T::*Func)() const>
         CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(ceil_pow2, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_CEIL_POW2);
         template<class T>
         static void ceil_pow2_dispatch(T &x, const T &y, typename boost::enable_if<has_ceil_pow2<T>>::type* = nullptr){
-            x = y;
-            x.ceil_pow2();
+            x = y.ceil_pow2();
         }
 
         template<class T>

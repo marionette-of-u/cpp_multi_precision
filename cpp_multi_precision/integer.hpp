@@ -286,9 +286,7 @@ namespace cpp_multi_precision{
                 typename container_type::const_iterator iter = unsigned_integer_type::container.begin(), end = unsigned_integer_type::container.end();
                 iter != end;
                 ++i, ++iter
-            ){
-                r += double(std::pow(2.0, double(radix_log2) * i) * *iter);
-            }
+            ){ r += double(std::pow(2.0, double(radix_log2) * i) * *iter); }
             return r;
         }
 
@@ -302,9 +300,10 @@ namespace cpp_multi_precision{
             return result;
         }
 
-        void ceil_pow2(){
-            integer a(std::move(*this));
-            ceil_pow2(*this, std::move(a));
+        integer ceil_pow2() const{
+            integer a;
+            ceil_pow2(a, *this);
+            return std::move(a);
         }
 
         std::size_t ceil_log2() const{
@@ -323,9 +322,15 @@ namespace cpp_multi_precision{
             return a < b ? a : b;
         }
 
-        static integer &root(integer &result, const integer &a){
-            unsigned_integer_type::root(result, a);
+        static integer &sqrt(integer &result, const integer &a){
+            unsigned_integer_type::sqrt(result, a);
             return result;
+        }
+
+        integer sqrt() const{
+            integer a;
+            sqrt(a, *this);
+            return std::move(a);
         }
 
         static integer &pow(integer &result, const integer &x, const integer &y){
@@ -342,6 +347,12 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        static integer pow(const integer &x, const integer &y){
+            integer r;
+            pow(r, x, y);
+            return std::move(r);
+        }
+
         static integer &pow_mod(integer &result, const integer &x, const integer &y, const integer &m){
             if(y.sign == true){
                 if(y == 0){ result.assign(1); }else{
@@ -356,6 +367,12 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        static integer pow_mod(const integer &x, const integer &y, const integer &m){
+            integer r;
+            pow_mod(r, x, y, m);
+            return std::move(r);
+        }
+
         static integer &gcd(integer &result, const integer &lhs, const integer &rhs){
             const unsigned_integer_type &ulhs(lhs), &urhs(rhs);
             if(ulhs >= urhs){
@@ -365,34 +382,10 @@ namespace cpp_multi_precision{
             }
         }
 
-        template<class MContainer, class VContainer>
-        static integer &cra(integer &result, const MContainer &m_container, const VContainer& v_container){
-            integer prod_m = 1, &c_sum(result);
-            c_sum = 0;
-            for(typename MContainer::const_iterator iter = m_container.begin(), end = m_container.end(); iter != end; ++iter){
-                integer temp(prod_m);
-                multi(prod_m, temp, *iter);
-            }
-            typename VContainer::const_iterator v_iter = v_container.begin();
-            for(
-                typename MContainer::const_iterator m_iter = m_container.begin(), end = m_container.end();
-                m_iter != end;
-                ++m_iter, ++v_iter
-            ){
-                integer rhs(*m_iter), d, s, v(*v_iter), c_temp;
-                div(d, prod_m, rhs);
-                eea(integer(), s, integer(), d, rhs);
-                integer vs = s * v;
-                c_temp = vs * rhs;
-                if(!c_temp.sign){
-                    unsigned_integer_type &u_temp(c_temp), urhs(rhs);
-                    urhs -= u_temp;
-                    u_temp.assign(urhs);
-                    c_temp.sign = true;
-                }
-                c_sum += c_temp * d;
-            }
-            return result;
+        static integer &gcd(const integer &lhs, const integer &rhs){
+            integer r;
+            gcd(r, lhs, rhs);
+            return std::move(r);
         }
 
         radix_type lc() const{ return unsigned_integer_type::lc(); }
@@ -407,19 +400,24 @@ namespace cpp_multi_precision{
             return result;
         }
 
-        void normalize(){
-            unsigned_integer_type::normalize();
-            sign = true;
+        integer normal() const{
+            integer r;
+            normal(r, *this);
+            return std::move(r);
         }
 
-        void lu(){
+        integer normalize(){
+            *this = normal();
+        }
+
+        integer lu(){
             if(*this == 0){
                 *this = 1;
                 return;
             }
-            integer a(*this), na;
-            normal(na, a);
-            div(*this, a, na);
+            integer na;
+            normal(na, *this);
+            return *this / na;
         }
 
         radix_type infinity_norm() const{
@@ -432,12 +430,24 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        integer norm1() const{
+            integer r;
+            norm1(r);
+            return std::move(r);
+        }
+
         radix_type cont() const{ return unsigned_integer_type::cont(); }
 
         static integer &pp(integer &result, const integer &x){
             unsigned_integer_type::pp(result, x);
             result.sign = true;
             return result;
+        }
+
+        integer pp(const integer &x) const{
+            integer r;
+            pp(r, x);
+            return std::move(r);
         }
 
         static integer &inverse(integer &result, const integer &f, std::size_t l){
@@ -459,6 +469,12 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        integer inverse(const integer &f, std::size_t l) const{
+            integer r;
+            inverse(r, f, l);
+            return std::move(r);
+        }
+
         static integer &modular_inverse(integer &result, const integer &a, const integer &m){
             result = 0;
             eea(integer(), result, integer(), a, m);
@@ -466,9 +482,16 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        static integer modular_inverse(const integer &a, const integer &m){
+            integer r;
+            modular_inverse(r, a, m);
+            return std::move(r);
+        }
+
         integer modular_inverse(const integer &m) const{
-            integer result;
-            return std::move(modular_inverse(result, *this, m));
+            integer r;
+            modular_inverse(r, *this, m);
+            return std::move(r);
         }
 
     private:
