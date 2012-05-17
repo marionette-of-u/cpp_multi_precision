@@ -3,16 +3,18 @@
 
 #include <utility>
 #include <map>
+#include <algorithm>
 #include <type_traits>
+#include <cmath>
 #include "ns_aux.hpp"
 
 namespace cpp_multi_precision{
     template<
         class OrderType,
         class CoefficientType,
-        bool CommutativeRing = std::is_integral<CoefficientType>::value,
         class Alloc = std::allocator<int>
     > class sparse_poly{
+    public:
         class container_type : public std::map<
             OrderType, CoefficientType, std::less<OrderType>,
             typename Alloc::template rebind<std::pair<const OrderType, CoefficientType> >::other
@@ -113,10 +115,8 @@ namespace cpp_multi_precision{
             }
         };
 
-    public:
         typedef typename container_type::key_type order_type;
         typedef typename container_type::mapped_type coefficient_type;
-        static const bool commutative_ring = CommutativeRing;
 
         sparse_poly() : container(){}
         sparse_poly(const sparse_poly &other) : container(other.container){}
@@ -436,15 +436,32 @@ namespace cpp_multi_precision{
             return ret;
         }
 
-        static sparse_poly &kar_multi(sparse_poly &result, const sparse_poly &lhs, const sparse_poly &rhs){
-            return result = kar_multi_impl_n(lhs, rhs);
+        static sparse_poly &eea(
+            sparse_poly &result,
+            sparse_poly &c_lhs,
+            sparse_poly &c_rhs,
+            const sparse_poly &lhs,
+            const sparse_poly &rhs
+        ){
+            if(lhs >= rhs){
+                eea_default_impl(result, c_lhs, c_rhs, lhs, rhs);
+            }else{
+                eea_default_impl(result, c_rhs, c_lhs, rhs, lhs);
+            }
+            return result;
         }
 
-        static sparse_poly &eea(sparse_poly &result, sparse_poly &c_lhs, sparse_poly &c_rhs, const sparse_poly &lhs, const sparse_poly &rhs){
-            if(lhs.container.rbegin()->first < rhs.container.rbegin()->first){
-                eea_default_impl(result, c_rhs, c_lhs, rhs, lhs);
+        static sparse_poly &eea_classic(
+            sparse_poly &result,
+            sparse_poly &c_lhs,
+            sparse_poly &c_rhs,
+            const sparse_poly &f,
+            const sparse_poly &g
+        ){
+            if(f >= g){
+                eea_classic_impl(result, c_lhs, c_rhs, f, g);
             }else{
-                eea_default_impl(result, c_lhs, c_rhs, lhs, rhs);
+                eea_classic_impl(result, c_rhs, c_lhs, g, f);
             }
             return result;
         }
@@ -490,6 +507,98 @@ namespace cpp_multi_precision{
             return !container.empty() && container.rbegin()->second == 1;
         }
 
+        static sparse_poly &pp(sparse_poly &result, const sparse_poly &x){
+            result = x;
+            coefficient_type c;
+            x.cont(c);
+            if(c == 1){ return result; }
+            for(
+                typename container_type::iterator iter = result.container.begin(), end = result.container.end();
+                iter != end;
+                ++iter
+            ){
+                coefficient_type &coe(iter->second);
+                coe /= c;
+                if(coe == 0){ iter = result.container.erase(iter); }
+            }
+            return result;
+        }
+
+        static sparse_poly &inverse(sparse_poly &result, const sparse_poly &f, const order_type &l){
+            result.container.clear();
+            sparse_poly &g(result);
+            g[0] = 1;
+            std::size_t r = ceil_log2_dispatch(l);
+            order_type rem(1);
+            for(std::size_t i = 0; i < r; ++i){
+                rem <<= 1;
+                sparse_poly next_g(g);
+                for(typename container_type::iterator double_g_iter = next_g.container.begin(), double_g_end = next_g.container.end(); double_g_iter != double_g_end; ++double_g_iter){
+                    coefficient_type coe_double_g(double_g_iter->second);
+                    double_g_iter->second = coe_double_g * 2;
+                }
+                next_g -= f * g * g;
+                if(next_g.container.rbegin()->first >= rem){
+                    next_g.container.erase(next_g.container.find(rem), next_g.container.end());
+                }
+                g = std::move(next_g);
+            }
+            return result;
+        }
+
+        static sparse_poly &modular_inverse(sparse_poly &result, const sparse_poly &a, const coefficient_type &m){
+            result = 0;
+            eea(sparse_poly(), result, sparse_poly(), a, m);
+            if(result < 0){ result += m; }
+            return result;
+        }
+
+        sparse_poly modular_inverse(const coefficient_type &m) const{
+            sparse_poly result;
+            return std::move(modular_inverse(result, *this, m));
+        }
+
+        coefficient_type &cont(coefficient_type &result) const{
+            if(container.empty()){
+                result = coefficient_type(0);
+                return result;
+            }
+            result = container.begin()->second;
+            if(container.size() == 1){
+                result.normalize();
+            }
+            typename container_type::const_iterator iter = container.begin(), end = container.end(); ++iter;
+            for(; iter != end; ++iter){
+                coefficient_type temp;
+                gcd_dispatch(temp, result, iter->second);
+                result = std::move(temp);
+                if(result == 1){ break; }
+            }
+            return result;
+        }
+
+        static sparse_poly &gcd(sparse_poly &result, const sparse_poly &f, const sparse_poly &g){
+            if(f >= g){
+                return gcd_default_impl(result, f, g);
+            }else{
+                return gcd_default_impl(result, g, f);
+            }
+        }
+
+        template<class MContainer, class VContainer>
+        static sparse_poly cra(const MContainer &m_container, const VContainer &v_container){
+            sparse_poly m = 1, ret;
+            for(typename MContainer::const_iterator iter = m_container.begin(), end = m_container.end(); iter != end; ++iter){
+                m *= *iter;
+            }
+            for(std::size_t i = 0, r = m_container.size(); i < r; ++i){
+                sparse_poly s, m_div_mi = m / m_container[i];
+                eea_classic(sparse_poly(), s, sparse_poly(), m_div_mi, sparse_poly(m_container[i]));
+                ret += m_div_mi * ((v_container[i] * s) % m_container[i]);
+            }
+            return std::move(ret);
+        }
+
         template<class Variable>
         std::string to_string(const Variable &v) const{
             return to_string_impl<std::string, char, Variable, std::ostringstream>(
@@ -515,20 +624,107 @@ namespace cpp_multi_precision{
         }
 
     private:
-#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ABS_MAX template<class T, const typename T::base_type& (*Func)(const typename T::base_type&, const typename T::base_type&)>
-        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(max, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ABS_MAX);
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_TO_DOUBLE template<class T, double (T::*Func)() const>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_double, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_TO_DOUBLE);
         template<class T>
-        static void max_dispatch(T &a, const T &b, typename boost::enable_if<has_max<T>>::type* = nullptr){
-            const typename T::base_type *ptr = &((T::base_type::max)(a, b));
+        static double to_double_dispatch(const T &a, typename boost::enable_if<has_to_double<T>>::type* = nullptr){
+            return a.to_double();
+        }
+
+        template<class T>
+        static double to_double_dispatch(const T &a, typename boost::disable_if<has_to_double<T>>::type* = nullptr){
+            return double(a);
+        }
+
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_UNSIGNED_INT template<class T, unsigned int (T::*Func)() const>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(to_unsigned_int, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_UNSIGNED_INT);
+        template<class T>
+        static unsigned int to_unsigned_int_dispatch(const T &a, typename boost::enable_if<has_to_unsigned_int<T>>::type* = nullptr){
+            return a.to_unsigned_int();
+        }
+
+        template<class T>
+        static double to_unsigned_int_dispatch(const T &a, typename boost::disable_if<has_to_unsigned_int<T>>::type* = nullptr){
+            return static_cast<unsigned int>(a);
+        }
+
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_EEA template<class T, T &(Func)(T&, T&, T&, const T&, const T&)>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(eea, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_EEA);
+        template<class T>
+        static T &eea_dispatch(T &result, T &s, T &t, const T &f, const T &g, typename boost::enable_if<has_eea<T>>::type* = nullptr){
+            T::eea(result, s, t, f, g);
+            return result;
+        }
+
+        template<class T>
+        static T &eea_dispatch(T &result, T &s, T &t, const T &f, const T &g, typename boost::disable_if<has_eea<T>>::type* = nullptr){
+            result = aux::eea_classic(s, t, f, g);
+            return result;
+        }
+
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ROOT template<class T, T &(Func)(T&, const T&)>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(root, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ROOT);
+        template<class T>
+        static T &root_dispatch(T &result, const T &a, typename boost::enable_if<has_root<T>>::type* = nullptr){
+            return T::root(result, a);
+        }
+
+        template<class T>
+        static T &root_dispatch(T &result, const T &a, typename boost::disable_if<has_root<T>>::type* = nullptr){
+            result = a / T(2);
+            T prev_x = result;
+            do{
+                prev_x = result;
+                result = (result + a / result) / T(2);
+                if(result * result <= a){ break; }
+            }while(prev_x != result);
+            return result;
+        }
+
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_POW template<class T, T &(Func)(T&, const T&, const T&)>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(pow, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_POW);
+        template<class T>
+        static T pow_dispatch(const T &a, const T &b, typename boost::enable_if<has_pow<T>>::type* = nullptr){
+            T r;
+            T::pow(r, a, b);
+            return r;
+        }
+
+        template<class T>
+        static T pow_dispatch(const T &a, const T &b, typename boost::disable_if<has_pow<T>>::type* = nullptr){
+            T result = 1;
+            for(T count = 0; count < b; ++count){
+                result *= a;
+            }
+            return result;
+        }
+
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_GCD template<class T, T &(Func)(T&, const T&, const T&)>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(gcd, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_GCD);
+        template<class T>
+        static void gcd_dispatch(T &result, const T &a, const T &b, typename boost::enable_if<has_gcd<T>>::type* = nullptr){
+            T::gcd(result, a, b);
+        }
+
+        template<class T>
+        static void gcd_dispatch(T &result, const T &a, const T &b, typename boost::disable_if<has_gcd<T>>::type* = nullptr){
+            result = aux::gcd(a, b);
+        }
+
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ABS_MAX template<class T, const T &(Func)(const T&, const T&)>
+        CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(abs_max, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_ABS_MAX);
+        template<class T>
+        static void max_dispatch(T &a, const T &b, typename boost::enable_if<has_abs_max<T>>::type* = nullptr){
+            const T *ptr = &((T::abs_max)(a, b));
             if(ptr != &a){ a = b; }
         }
 
         template<class T>
-        static void max_dispatch(T &a, const T &b, typename boost::disable_if<has_max<T>>::type* = nullptr){
+        static void max_dispatch(T &a, const T &b, typename boost::disable_if<has_abs_max<T>>::type* = nullptr){
             a = (std::max)(std::abs(a), std::abs(b));
         }
 
-#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_CEIL_POW2 template<class T, void (T::base_type::*Func)()>
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_CEIL_POW2 template<class T, void (T::*Func)()>
         CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(ceil_pow2, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_CEIL_POW2);
         template<class T>
         static void ceil_pow2_dispatch(T &x, const T &y, typename boost::enable_if<has_ceil_pow2<T>>::type* = nullptr){
@@ -541,7 +737,7 @@ namespace cpp_multi_precision{
             x = aux::ceil_pow2(y);
         }
 
-#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_CEIL_LOG2 template<class T, std::size_t (T::base_type::*Func)() const>
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_CEIL_LOG2 template<class T, std::size_t (T::*Func)() const>
         CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(ceil_log2, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_CEIL_LOG2);
         template<class T>
         static std::size_t ceil_log2_dispatch(const T &x, typename boost::enable_if<has_ceil_log2<T>>::type* = nullptr){
@@ -632,26 +828,22 @@ namespace cpp_multi_precision{
             return result;
         }
 
-        static sparse_poly &square_div(sparse_poly &result, sparse_poly &rem, const sparse_poly &lhs, const sparse_poly &rhs){
-            rem = lhs;
-            result = 0;
-            const order_type &rhs_order(rhs.container.rbegin()->first);
-            const coefficient_type &rhs_coe(rhs.container.rbegin()->second);
-            for(; !rem.container.empty(); ){
-                const order_type &rem_order(rem.container.rbegin()->first);
-                const coefficient_type &rem_coe(rem.container.rbegin()->second);
-                if(rem_order >= rhs_order){
-                    order_type n = rem_order;
-                    n -= rhs_order;
-                    coefficient_type q = rem_coe / rhs_coe;
-                    if(q == 0){
-                        break;
-                    }
-                    rem.sub_n_q(rhs, n, q);
-                    result.addition_order_coe(n, q);
-                }else{ break; }
+        static sparse_poly &square_div(sparse_poly &q, sparse_poly &r, const sparse_poly &a, const sparse_poly &b){
+            r = a;
+            q = 0;
+            if(a < b){ return q; }
+            const order_type &m(b.container.rbegin()->first);
+            const coefficient_type &u(b.container.rbegin()->second);
+            for(; ; ){
+                order_type n = r.container.rbegin()->first - m;
+                if(n < 0){ break; }
+                coefficient_type qn = r.lc() / u;
+                if(qn == 0){ break; }
+                q.addition_order_coe(n, qn);
+                r.sub_n_q(b, n, qn);
+                if(r.container.empty()){ break; }
             }
-            return result;
+            return q;
         }
 
         static sparse_poly &square_div(sparse_poly &result, const sparse_poly &lhs, const sparse_poly &rhs){
@@ -740,6 +932,10 @@ namespace cpp_multi_precision{
                 if(lhs_iter != lhs_end && rhs_iter == rhs_end){ return false; }
             }
             return final;
+        }
+
+        static sparse_poly &kar_multi(sparse_poly &result, const sparse_poly &lhs, const sparse_poly &rhs){
+            return result = kar_multi_impl_n(lhs, rhs);
         }
 
         void add_order_n(const sparse_poly &rhs, const order_type &n){
@@ -866,7 +1062,7 @@ namespace cpp_multi_precision{
 
         template<bool Rem>
         static sparse_poly &monic_div_impl(sparse_poly &result, sparse_poly &rem, const sparse_poly &lhs, const sparse_poly &rhs){
-            if(!commutative_ring || !rhs.is_monic()){
+            if(!rhs.is_monic()){
                 return square_div(result, rem, lhs, rhs);
             }
             result.container.clear();
@@ -934,44 +1130,56 @@ namespace cpp_multi_precision{
             }
         }
 
-        static sparse_poly &gcd_default_impl(sparse_poly &result, sparse_poly lhs, sparse_poly rhs){
-            if(rhs.container.empty()){
-                result.container.clear();
+        static sparse_poly &gcd_default_impl(sparse_poly &result, const sparse_poly &f, const sparse_poly &g){
+            result.container.clear();
+            if(g.container.empty()){ return result; }
+            sparse_poly r_0, r_1;
+            bool zero_flag[2] = { false, false };
+            if(f.container.rbegin()->first > 0){
+                normal(r_0, f);
+            }else{
+                r_0 = f;
+                zero_flag[0] = true;
+            }
+            if(g.container.rbegin()->first > 0){
+                normal(r_1, g);
+            }else{
+                r_1 = g;
+                zero_flag[1] = true;
+            }
+            if(zero_flag[0] && zero_flag[1]){
+                coefficient_type r;
+                gcd_dispatch(r, r_0.container.rbegin()->second, r_1.container.rbegin()->second);
+                result.container.insert(std::make_pair(order_type(0), std::move(r)));
                 return result;
             }
-            sparse_poly *operands[3] = { &lhs, &rhs, &result };
-            for(; ; ){
-                mod(*operands[2], *operands[0], *operands[1]);
-                if(operands[2]->size() == 0){ break; }
-                sparse_poly *ptr = operands[0];
-                for(int i = 0; i < 2; ++i){ operands[i] = operands[i + 1]; }
-                operands[2] = ptr;
+            if(zero_flag[0] || zero_flag[1]){
+                result.container.insert(std::make_pair(order_type(0), coefficient_type(1)));
+                return result;
             }
-            if(operands[1] != result){ result.assign(*operands[1]); }
+            while(!r_1.container.empty()){
+                sparse_poly q = r_0 / r_1, rho = r_0 - q * r_1, r_m = r_1;
+                rho.lu();
+                r_1 = (r_0 - q * r_1) / rho;
+                r_0 = std::move(r_m);
+            }
+            result = std::move(r_0);
             return result;
         }
 
-        static sparse_poly &eea_default_impl(
+        static sparse_poly &eea_classic_impl(
             sparse_poly &result,
             sparse_poly &c_lhs,
             sparse_poly &c_rhs,
-            const sparse_poly &lhs,
-            const sparse_poly &rhs
+            const sparse_poly &f,
+            const sparse_poly &g
         ){
-            if(rhs.container.empty()){
-                result.container.clear();
-                c_lhs.container.clear();
-                c_rhs.container.clear();
-                return result;
-            }
-            sparse_poly r_0, r_1, s_0 = 1 / lhs.lc(), s_1 = coefficient_type(0), t_0 = coefficient_type(0), t_1 = 1 / rhs.lc();
-            normal(r_0, lhs), normal(r_1, rhs);
-            for(; !r_1.container.empty(); ){
-                sparse_poly q = r_0 / r_1, rho = r_0 - q * r_1, r_m = r_1, s_m = s_1, t_m = t_1;
-                rho.lu();
-                r_1 = (r_0 - q * r_1) / rho;
-                s_1 = (s_0 - q * s_1) / rho;
-                t_1 = (t_0 - q * t_1) / rho;
+            sparse_poly r_0 = f, r_1 = g, s_0 = 1, s_1 = 0, t_0 = 0, t_1 = 1;
+            while(!r_1.container.empty()){
+                sparse_poly q = r_0 / r_1, r_m = r_1, s_m = s_1, t_m = t_1;
+                r_1 = r_0 - q * r_1;
+                s_1 = s_0 - q * s_1;
+                t_1 = t_0 - q * t_1;
                 r_0 = std::move(r_m);
                 s_0 = std::move(s_m);
                 t_0 = std::move(t_m);
@@ -982,53 +1190,44 @@ namespace cpp_multi_precision{
             return result;
         }
 
-        static sparse_poly &primitive_part(sparse_poly &result, const sparse_poly &x){
-            result = x;
-            coefficient_type c, t; x.cout(c);
-            for(typename container_type::iterator iter = result.container.begin(), end = result.container.end(); iter != end; ++iter){
-                t.assign(iter->second);
-                coefficient_type &coe(iter->second);
-                coefficient_type::div(coe, t, c);
-                if(coe == 0){ iter = result.container.erase(iter); }
-            }
-            return result;
-        }
-
-        static sparse_poly &inverse(sparse_poly &result, const sparse_poly &f, const order_type &l){
+        static sparse_poly &eea_default_impl(
+            sparse_poly &result,
+            sparse_poly &c_lhs,
+            sparse_poly &c_rhs,
+            const sparse_poly &f,
+            const sparse_poly &g
+        ){
             result.container.clear();
-            sparse_poly &g(result);
-            g[0] = 1;
-            std::size_t r = ceil_log2_dispatch(l);
-            order_type rem(1);
-            for(std::size_t i = 0; i < r; ++i){
-                rem <<= 1;
-                sparse_poly next_g(g);
-                for(typename container_type::iterator double_g_iter = next_g.container.begin(), double_g_end = next_g.container.end(); double_g_iter != double_g_end; ++double_g_iter){
-                    coefficient_type coe_double_g(double_g_iter->second);
-                    double_g_iter->second = coe_double_g * 2;
-                }
-                next_g -= f * g * g;
-                if(next_g.container.rbegin()->first >= rem){
-                    next_g.container.erase(next_g.container.find(rem), next_g.container.end());
-                }
-                g = std::move(next_g);
-            }
-            return result;
-        }
-
-        coefficient_type &cout(coefficient_type &result) const{
-            if(container.empty()){
-                result.container.clear();
+            if(g.container.empty()){
+                c_lhs.container.clear();
+                c_rhs.container.clear();
                 return result;
             }
-            coefficient_type temp;
-            result.assign(container.begin()->second);
-            typename container_type::const_iterator iter = container.begin(), end = container.end(); ++iter;
-            for(; iter != end; ++iter){
-                coefficient_type::gcd(temp, result, iter->second);
-                result.assign(temp);
-                if(result == 1){ break; }
+            sparse_poly
+                rho_0 = f.lc(),
+                rho_1 = g.lc(),
+                r_0,
+                r_1,
+                s_0 = 1 / rho_0,
+                s_1 = coefficient_type(0),
+                t_0 = coefficient_type(0),
+                t_1 = 1 / rho_1;
+            normal(r_0, f), normal(r_1, g);
+            while(!r_1.container.empty()){
+                sparse_poly q = r_0 / r_1, r_m = r_1, s_m = s_1, t_m = t_1, rho_m = rho_1;
+                rho_1 = r_0 - q * r_1;
+                rho_1.lu();
+                r_1 = (r_0 - q * r_1) / rho_1;
+                s_1 = (s_0 - q * s_1) / rho_1;
+                t_1 = (t_0 - q * t_1) / rho_1;
+                rho_0 = std::move(rho_m);
+                r_0 = std::move(r_m);
+                s_0 = std::move(s_m);
+                t_0 = std::move(t_m);
             }
+            result = std::move(r_0);
+            c_lhs = std::move(s_0);
+            c_rhs = std::move(t_0);
             return result;
         }
 
@@ -1135,90 +1334,90 @@ namespace cpp_multi_precision{
         container_type container;
     };
 
-    template<class OrderType, class CoefficientType, bool CoefficientIsIntegral, class Alloc>
-    sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>
+    template<class OrderType, class CoefficientType, class Alloc>
+    sparse_poly<OrderType, CoefficientType, Alloc>
     operator +(
-        const typename sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>::coefficient_type &lhs,
-        const sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc> &rhs
-    ){ return sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>(lhs) + rhs; }
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) + rhs; }
 
-    template<class OrderType, class CoefficientType, bool CoefficientIsIntegral, class Alloc>
-    sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>
+    template<class OrderType, class CoefficientType, class Alloc>
+    sparse_poly<OrderType, CoefficientType, Alloc>
     operator -(
-        const typename sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>::coefficient_type &lhs,
-        const sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc> &rhs
-    ){ return sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>(lhs) - rhs; }
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) - rhs; }
 
-    template<class OrderType, class CoefficientType, bool CoefficientIsIntegral, class Alloc>
-    sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>
+    template<class OrderType, class CoefficientType, class Alloc>
+    sparse_poly<OrderType, CoefficientType, Alloc>
     operator *(
-        const typename sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>::coefficient_type &lhs,
-        const sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc> &rhs
-    ){ return sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>(lhs) * rhs; }
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) * rhs; }
 
-    template<class OrderType, class CoefficientType, bool CoefficientIsIntegral, class Alloc>
-    sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>
+    template<class OrderType, class CoefficientType, class Alloc>
+    sparse_poly<OrderType, CoefficientType, Alloc>
     operator /(
-        const typename sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>::coefficient_type &lhs,
-        const sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc> &rhs
-    ){ return sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>(lhs) / rhs; }
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) / rhs; }
 
-    template<class OrderType, class CoefficientType, bool CoefficientIsIntegral, class Alloc>
-    sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>
+    template<class OrderType, class CoefficientType, class Alloc>
+    sparse_poly<OrderType, CoefficientType, Alloc>
     operator %(
-        const typename sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>::coefficient_type &lhs,
-        const sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc> &rhs
-    ){ return sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>(lhs) % rhs; }
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) % rhs; }
 
-    template<class OrderType, class CoefficientType, bool CoefficientIsIntegral, class Alloc>
+    template<class OrderType, class CoefficientType, class Alloc>
     bool operator <(
-        const typename sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>::coefficient_type &lhs,
-        const sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc> &rhs
-    ){ return sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>(lhs) < rhs; }
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) < rhs; }
 
-    template<class OrderType, class CoefficientType, bool CoefficientIsIntegral, class Alloc>
+    template<class OrderType, class CoefficientType, class Alloc>
     bool operator >(
-        const typename sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>::coefficient_type &lhs,
-        const sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc> &rhs
-    ){ return sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>(lhs) > rhs; }
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) > rhs; }
 
-    template<class OrderType, class CoefficientType, bool CoefficientIsIntegral, class Alloc>
+    template<class OrderType, class CoefficientType, class Alloc>
     bool operator <=(
-        const typename sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>::coefficient_type &lhs,
-        const sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc> &rhs
-    ){ return sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>(lhs) <= rhs; }
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) <= rhs; }
 
-    template<class OrderType, class CoefficientType, bool CoefficientIsIntegral, class Alloc>
+    template<class OrderType, class CoefficientType, class Alloc>
     bool operator >=(
-        const typename sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>::coefficient_type &lhs,
-        const sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc> &rhs
-    ){ return sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>(lhs) >= rhs; }
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) >= rhs; }
 
-    template<class OrderType, class CoefficientType, bool CoefficientIsIntegral, class Alloc>
+    template<class OrderType, class CoefficientType, class Alloc>
     bool operator ==(
-        const typename sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>::coefficient_type &lhs,
-        const sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc> &rhs
-    ){ return sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>(lhs) == rhs; }
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) == rhs; }
 
-    template<class OrderType, class CoefficientType, bool CoefficientIsIntegral, class Alloc>
+    template<class OrderType, class CoefficientType, class Alloc>
     bool operator !=(
-        const typename sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>::coefficient_type &lhs,
-        const sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc> &rhs
-    ){ return sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc>(lhs) != rhs; }
+        const typename sparse_poly<OrderType, CoefficientType, Alloc>::coefficient_type &lhs,
+        const sparse_poly<OrderType, CoefficientType, Alloc> &rhs
+    ){ return sparse_poly<OrderType, CoefficientType, Alloc>(lhs) != rhs; }
 
-    template<class OrderType, class CoefficientType, bool CoefficientIsIntegral, class Alloc>
+    template<class OrderType, class CoefficientType, class Alloc>
     std::ostream &operator <<(
         std::ostream &ostream,
-        const sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc> &value
+        const sparse_poly<OrderType, CoefficientType, Alloc> &value
     ){
         ostream << value.to_string();
         return ostream;
     }
 
-    template<class OrderType, class CoefficientType, bool CoefficientIsIntegral, class Alloc>
+    template<class OrderType, class CoefficientType, class Alloc>
     std::wostream &operator <<(
         std::wostream &ostream,
-        const sparse_poly<OrderType, CoefficientType, CoefficientIsIntegral, Alloc> &value
+        const sparse_poly<OrderType, CoefficientType, Alloc> &value
     ){
         ostream << value.to_wstring();
         return ostream;

@@ -196,69 +196,6 @@ namespace cpp_multi_precision{
             bool value;
         };
 
-        template <class T, class Container = std::vector<T>, class Comp = std::greater<T>>
-        class random_access_priority_queue{
-        public:
-            random_access_priority_queue(){}
-
-            random_access_priority_queue(const Container& container){
-                container_ = container;
-                std::make_heap(container_.begin(), container_.end(), Comp());
-            }
-
-            random_access_priority_queue<T, Container, Comp> &operator =(
-                const random_access_priority_queue<T, Container, Comp> &other
-            ){
-                if(this != &other){ container_ = other.container_; }
-                return *this;
-            }
-
-            void push(const T &x){
-                container_.push_back(x);
-                std::push_heap(container_.begin(), container_.end(), Comp());
-            }
-
-            void pop(){
-                std::pop_heap(container_.begin(), container_.end(), Comp());
-                container_.pop_back();
-            }
-
-            const T &top(){
-                return container_.front();
-            }
-
-            const Container &get_container() const{
-                return container_;
-            }
-
-            T &operator [](size_t n){
-                return container_[n];
-            }
-
-            typename Container::const_iterator begin() const{
-                return container_.begin();
-            }
-
-            typename Container::const_iterator end() const{
-                return container_.end();
-            }
-
-            size_t size() const{
-                return container_.size();
-            }
-
-            T &base(){
-                return container_.back();
-            }
-
-            typename Container::iterator erase(typename Container::iterator position) {
-                return container_.erase(position);
-            }
-
-        private:
-            Container container_;
-        };
-
         template<class Type>
         bool prime_div_test(Type n){
             for(Type i = 3; i * i <= n; i += 2){
@@ -275,8 +212,9 @@ namespace cpp_multi_precision{
             typedef Type value_type;
             typedef std::vector<value_type> ext_prime_vec_type;
 
-            static std::vector<value_type> get_prime_set(value_type k, std::size_t n){
+            static std::pair<std::vector<value_type>, value_type> get_prime_set(value_type k, std::size_t n){
                 table(0);
+                value_type u;
                 std::vector<value_type> r;
                 r.resize(n);
                 if(k <= range_upper_bound()){
@@ -284,6 +222,7 @@ namespace cpp_multi_precision{
                     for(std::size_t i = 0; i < n; ++i){
                         r[n - i - 1] = table(index - i);
                     }
+                    u = table(index + 1);
                 }else{
                     std::size_t index = push_ext_prime(k);
                     if(index == 0){ index = get_ext_index(k); }
@@ -299,8 +238,9 @@ namespace cpp_multi_precision{
                             r[n - i - 1] = ext_prime_vec()[index - i - 1];
                         }
                     }
+                    u = table(index + 1);
                 }
-                return std::move(r);
+                return std::make_pair(std::move(r), u);
             }
 
             static std::size_t push_ext_prime(value_type k){
@@ -400,12 +340,15 @@ namespace cpp_multi_precision{
             typedef std::vector<value_type> ext_prime_vec_type;
             typedef prime_list<value_type, 32> prime32_type;
 
-            static std::vector<value_type> get_prime_set(value_type k, std::size_t n){
+            static std::pair<std::vector<value_type>, value_type> get_prime_set(value_type k, std::size_t n){
                 table(0);
+                value_type u;
                 std::vector<value_type> r;
                 r.resize(n);
                 if(k < range_lower_bound()){
-                    r = std::move(prime32_type::get_prime_set(k, n));
+                    std::pair<ext_prime_vec_type, value_type> pair_set_u(prime32_type::get_prime_set(k, n));
+                    r = std::move(pair_set_u.first);
+                    u = pair_set_u.second;
                 }else if(k <= range_upper_bound()){
                     std::size_t index = get_table_index(k);
                     if(index >= n){
@@ -413,16 +356,16 @@ namespace cpp_multi_precision{
                             r[n - i - 1] = table(index - i);
                         }
                     }else{
-                        std::size_t i = 0;
-                        for(; i < index; ++i){
+                        for(std::size_t i = 0; i < index; ++i){
                             r[n - i - 1] = table(index - i);
                         }
                         std::size_t m = n - index;
-                        std::vector<value_type> rest(std::move(prime32_type::get_prime_set(range_lower_bound(), m)));
+                        std::vector<value_type> rest(std::move(prime32_type::get_prime_set(range_lower_bound(), m).first));
                         for(std::size_t j = 0; j < m; ++j){
                             r[m - j - 1] = rest[m - j - 1];
                         }
                     }
+                    u = table(index + 1);
                 }else{
                     std::size_t index = push_ext_prime(k);
                     if(index == 0){ index = get_ext_index(k); }
@@ -438,8 +381,9 @@ namespace cpp_multi_precision{
                             r[n - i - 1] = ext_prime_vec()[index - i - 1];
                         }
                     }
+                    u = table(index + 1);
                 }
-                return std::move(r);
+                return std::make_pair(std::move(r), u);
             }
 
             static std::size_t push_ext_prime(value_type k){
@@ -532,6 +476,42 @@ namespace cpp_multi_precision{
                 return n;
             }
         };
+
+        template<class T>
+        T gcd(T a, T b){
+            if(b == 1){ return b; }
+            T c;
+            for(; ; ){
+                c = a - a / b;
+                if(c == 0){ return b; }
+                a = b, b = c;
+            }
+            return std::move(c);
+        }
+
+        template<class T>
+        T eea_classic(T &s, T &t, const T &f, const T &g){
+            T result = 0;
+            if(g == 0){
+                s = 0, t = 0;
+                return std::move(result);
+            }
+            T r_0 = f, r_1 = g, s_0 = 1, s_1 = 0, t_0 = 0, t_1 = 1;
+            while(r_1 != 0){
+                T &q(result);
+                q = r_0 / r_1;
+                T r_m = r_1, s_m = s_1, t_m = t_1;
+                r_1 = r_0 - q * r_1;
+                s_1 = s_0 - q * s_1;
+                t_1 = t_0 - q * t_1;
+                r_0 = std::move(r_m);
+                s_0 = std::move(s_m);
+                t_0 = std::move(t_m);
+            }
+            s = std::move(s_0);
+            t = std::move(t_0);
+            return std::move(result);
+        }
     }
 }
 

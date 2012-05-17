@@ -197,8 +197,8 @@ namespace cpp_multi_precision{
         bool operator <(const rational &rhs) const{
             integer_type a, b;
             if(sign != rhs.sign){ return sign == false; }
-            integer_type::kar_multi(a, numerator, rhs.denominator);
-            integer_type::kar_multi(b, rhs.numerator, denominator);
+            a = numerator * rhs.denominator;
+            b = rhs.numerator * denominator;
             a.sign = sign;
             b.sign = rhs.sign;
             return a < b;
@@ -207,8 +207,8 @@ namespace cpp_multi_precision{
         bool operator <=(const rational &rhs) const{
             integer_type a, b;
             if(sign != rhs.sign){ return sign == false; }
-            integer_type::kar_multi(a, numerator, rhs.denominator);
-            integer_type::kar_multi(b, rhs.numerator, denominator);
+            a = numerator * rhs.denominator;
+            b = rhs.numerator * denominator;
             a.sign = sign;
             b.sign = rhs.sign;
             return a <= b;
@@ -232,8 +232,8 @@ namespace cpp_multi_precision{
         }
 
         static rational &multi(rational &result, const rational &lhs, const rational &rhs){
-            integer_type::kar_multi(result.numerator, lhs.numerator, rhs.numerator);
-            integer_type::kar_multi(result.denominator, lhs.denominator, rhs.denominator);
+            result.numerator = lhs.numerator * rhs.numerator;
+            result.denominator = lhs.denominator * rhs.denominator;
             result.reduce();
             if(result.numerator == 0){
                 result.sign = true;
@@ -244,8 +244,8 @@ namespace cpp_multi_precision{
         }
 
         static rational &div(rational &result, const rational &lhs, const rational &rhs){
-            integer_type::kar_multi(result.numerator, lhs.numerator, rhs.denominator);
-            integer_type::kar_multi(result.denominator, lhs.denominator, rhs.numerator);
+            result.numerator = lhs.numerator * rhs.denominator;
+            result.denominator = lhs.denominator * rhs.numerator;
             result.reduce();
             if(result.numerator == 0){
                 result.sign = true;

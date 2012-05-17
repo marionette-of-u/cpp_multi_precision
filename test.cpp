@@ -82,7 +82,8 @@ void test_sparse_poly(){
     > rational;
 
     // 上記の二つをあわせて疎な多項式型を作る
-    typedef cpp_multi_precision::sparse_poly<integer, rational, true> sparse_poly;
+    typedef cpp_multi_precision::sparse_poly<integer, rational> sparse_poly;
+    typedef cpp_multi_precision::sparse_poly<integer, integer> z_field_sparse_poly;
 
     std::cout << "start test_sparse_poly\n";
 
@@ -103,7 +104,7 @@ void test_sparse_poly(){
     // b -= 2
     poly_b[0] -= 2;
 
-    sparse_poly::kar_multi(poly_c, poly_a, poly_b);
+    poly_c = poly_a * poly_b;
     sparse_poly::eea(poly_r, poly_cl, poly_cr, poly_a, poly_b);
 
     // a, b の式は入力
@@ -308,7 +309,7 @@ void test_modular_and_poly(){
         std::vector<unsigned int>
     > integer;
 
-    typedef cpp_multi_precision::sparse_poly<integer, integer, true> sparse_poly;
+    typedef cpp_multi_precision::sparse_poly<integer, integer> sparse_poly;
     typedef cpp_multi_precision::modular<sparse_poly> modular;
     
     std::cout << "start test_modular_and_poly\n";
@@ -350,18 +351,18 @@ void test_prime_list(){
     std::cout << "start test_prime_list\n";
 
     typedef cpp_multi_precision::aux::prime_list<unsigned int> prime_list32_type;
-    std::vector<unsigned int> r32 = prime_list32_type::get_prime_set(0x382b6b + 2, 10);
+    std::vector<unsigned int> r32 = prime_list32_type::get_prime_set(0x382b6b + 2, 10).first;
     for(auto iter = r32.begin(), end = r32.end(); iter != end; ++iter){
         std::cout << *iter << "\n";
     }
     std::cout << "\n";
-    r32 = prime_list32_type::get_prime_set(0x382b6b + 9999, 5);
+    r32 = prime_list32_type::get_prime_set(0x382b6b + 9999, 5).first;
     for(auto iter = r32.begin(), end = r32.end(); iter != end; ++iter){
         std::cout << *iter << "\n";
     }
     std::cout << "\n";
     typedef cpp_multi_precision::aux::prime_list<unsigned long long> prime_list64_type;
-    std::vector<unsigned long long> r64 = prime_list64_type::get_prime_set(0x10058b727 + 100, 10);
+    std::vector<unsigned long long> r64 = prime_list64_type::get_prime_set(0x10058b727 + 100, 10).first;
     for(auto iter = r64.begin(), end = r64.end(); iter != end; ++iter){
         std::cout << *iter << "\n";
     }

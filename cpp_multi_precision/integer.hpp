@@ -279,6 +279,199 @@ namespace cpp_multi_precision{
         };
 
     public:
+        double to_double() const{
+            double r = 0;
+            std::size_t i = 0;
+            for(
+                typename container_type::const_iterator iter = unsigned_integer_type::container.begin(), end = unsigned_integer_type::container.end();
+                iter != end;
+                ++i, ++iter
+            ){
+                r += double(std::pow(2.0, double(radix_log2) * i) * *iter);
+            }
+            return r;
+        }
+
+        unsigned int to_unsigned_int() const{
+            if(*this == 0){ return 0; }
+            return static_cast<unsigned int>(unsigned_integer_type::container[0]);
+        }
+
+        static integer &ceil_pow2(integer &result, const integer &a){
+            unsigned_integer_type::ceil_pow2(result, a);
+            return result;
+        }
+
+        void ceil_pow2(){
+            integer a(std::move(*this));
+            ceil_pow2(*this, std::move(a));
+        }
+
+        std::size_t ceil_log2() const{
+            return unsigned_integer_type::ceil_log2();
+        }
+
+        static const integer &max(const integer &a, const integer &b){
+            return a > b ? a : b;
+        }
+
+        static const integer &abs_max(const integer &a, const integer &b){
+            return static_cast<const unsigned_integer_type&>(a) > static_cast<const unsigned_integer_type&>(b) ? a : b;
+        }
+
+        static const integer &min(const integer &a, const integer &b){
+            return a < b ? a : b;
+        }
+
+        static integer &root(integer &result, const integer &a){
+            unsigned_integer_type::root(result, a);
+            return result;
+        }
+
+        static integer &pow(integer &result, const integer &x, const integer &y){
+            if(y.sign == true){
+                if(y == 0){ result.assign(1); }else{
+                    unsigned_integer_type::template pow_impl<false>(result, x, y, kar_multi);
+                    if(!x.sign && (x.container[0] & 1) == 0){
+                        result.sign = true;
+                    }
+                }
+            }else{
+                result.assign(0);
+            }
+            return result;
+        }
+
+        static integer &pow_mod(integer &result, const integer &x, const integer &y, const integer &m){
+            if(y.sign == true){
+                if(y == 0){ result.assign(1); }else{
+                    unsigned_integer_type::template pow_impl<true>(result, x, y, kar_multi, m);
+                    if(!x.sign && (x.container[0] & 1) == 0){
+                        result.sign = true;
+                    }
+                }
+            }else{
+                result.assign(0);
+            }
+            return result;
+        }
+
+        static integer &gcd(integer &result, const integer &lhs, const integer &rhs){
+            const unsigned_integer_type &ulhs(lhs), &urhs(rhs);
+            if(ulhs >= urhs){
+                return gcd_impl(result, lhs, rhs);
+            }else{
+                return gcd_impl(result, rhs, lhs);
+            }
+        }
+
+        template<class MContainer, class VContainer>
+        static integer &cra(integer &result, const MContainer &m_container, const VContainer& v_container){
+            integer prod_m = 1, &c_sum(result);
+            c_sum = 0;
+            for(typename MContainer::const_iterator iter = m_container.begin(), end = m_container.end(); iter != end; ++iter){
+                integer temp(prod_m);
+                multi(prod_m, temp, *iter);
+            }
+            typename VContainer::const_iterator v_iter = v_container.begin();
+            for(
+                typename MContainer::const_iterator m_iter = m_container.begin(), end = m_container.end();
+                m_iter != end;
+                ++m_iter, ++v_iter
+            ){
+                integer rhs(*m_iter), d, s, v(*v_iter), c_temp;
+                div(d, prod_m, rhs);
+                eea(integer(), s, integer(), d, rhs);
+                integer vs = s * v;
+                c_temp = vs * rhs;
+                if(!c_temp.sign){
+                    unsigned_integer_type &u_temp(c_temp), urhs(rhs);
+                    urhs -= u_temp;
+                    u_temp.assign(urhs);
+                    c_temp.sign = true;
+                }
+                c_sum += c_temp * d;
+            }
+            return result;
+        }
+
+        radix_type lc() const{ return unsigned_integer_type::lc(); }
+
+        static integer &normal(integer &result, const integer &x){
+            if(x == 0){
+                result = 0;
+                return result;
+            }
+            unsigned_integer_type::normal(result, x);
+            result.sign = true;
+            return result;
+        }
+
+        void normalize(){
+            unsigned_integer_type::normalize();
+            sign = true;
+        }
+
+        void lu(){
+            if(*this == 0){
+                *this = 1;
+                return;
+            }
+            integer a(*this), na;
+            normal(na, a);
+            div(*this, a, na);
+        }
+
+        radix_type infinity_norm() const{
+            return unsigned_integer_type::infinity_norm();
+        }
+
+        integer &norm1(integer &result) const{
+            unsigned_integer_type::norm1(result);
+            result.sign = true;
+            return result;
+        }
+
+        radix_type cont() const{ return unsigned_integer_type::cont(); }
+
+        static integer &pp(integer &result, const integer &x){
+            unsigned_integer_type::pp(result, x);
+            result.sign = true;
+            return result;
+        }
+
+        static integer &inverse(integer &result, const integer &f, std::size_t l){
+            integer &g(result);
+            g = 1;
+            std::size_t r = aux::ceil_log2(l), rem = 1;
+            for(std::size_t i = 0; i < r; ++i){
+                rem <<= 1;
+                integer next_g(g);
+                for(
+                    typename container_type::iterator double_g_iter = next_g.container.begin(), double_g_end = next_g.container.end();
+                    double_g_iter != double_g_end;
+                    ++double_g_iter
+                ){ *double_g_iter = *double_g_iter * 2; }
+                next_g -= f * g * g;
+                if(next_g.container.size() >= rem){ next_g.container.resize(rem - 1); }
+                g = std::move(next_g);
+            }
+            return result;
+        }
+
+        static integer &modular_inverse(integer &result, const integer &a, const integer &m){
+            result = 0;
+            eea(integer(), result, integer(), a, m);
+            if(!result.sign){ result += m; }
+            return result;
+        }
+
+        integer modular_inverse(const integer &m) const{
+            integer result;
+            return std::move(modular_inverse(result, *this, m));
+        }
+
+    private:
         static integer &multi(integer &result, const integer &lhs, radix_type rhs){
             result.sign = lhs.sign;
             unsigned_integer_type::multi(result, lhs, rhs);
@@ -324,7 +517,6 @@ namespace cpp_multi_precision{
             return result;
         }
 
-    private:
         static std::size_t mshift_left(std::size_t x, std::size_t i){
             if(i < sizeof(std::size_t) * 8){
                 return x << i;
@@ -341,7 +533,6 @@ namespace cpp_multi_precision{
             }
         }
 
-    private:
         template<bool Rem>
         static integer &div_impl(integer &result, integer &rem, const integer &lhs, const integer &rhs){
             if(lhs == 0){
@@ -358,7 +549,6 @@ namespace cpp_multi_precision{
             return result;
         }
 
-    public:
         static integer &div(integer &result, integer &rem, const integer &lhs, const integer &rhs){
             return div_impl<true>(result, rem, lhs, rhs);
         }
@@ -374,113 +564,12 @@ namespace cpp_multi_precision{
             return rem;
         }
 
-        static integer &pow(integer &result, const integer &x, const integer &y){
-            if(y.sign == true){
-                if(y == 0){ result.assign(1); }else{
-                    unsigned_integer_type::template pow_impl<false>(result, x, y, kar_multi);
-                    if(!x.sign && (x.container[0] & 1) == 0){
-                        result.sign = true;
-                    }
-                }
-            }else{
-                result.assign(0);
-            }
-            return result;
-        }
-
-        static integer &pow_mod(integer &result, const integer &x, const integer &y, const integer &m){
-            if(y.sign == true){
-                if(y == 0){ result.assign(1); }else{
-                    unsigned_integer_type::template pow_impl<true>(result, x, y, kar_multi, m);
-                    if(!x.sign && (x.container[0] & 1) == 0){
-                        result.sign = true;
-                    }
-                }
-            }else{
-                result.assign(0);
-            }
-            return result;
-        }
-
-        static integer &gcd(integer &result, const integer &lhs, const integer &rhs){
-            const unsigned_integer_type &ulhs(lhs), &urhs(rhs);
-            if(ulhs >= urhs){
-                return gcd_impl(result, lhs, rhs);
-            }else{
-                return gcd_impl(result, rhs, lhs);
-            }
-        }
-
-        template<class MContainer, class VContainer>
-        static integer &cra(integer &result, const MContainer &m_container, const VContainer& v_container){
-            integer prod_m(1), &c_sum(result);
-            c_sum.assign(0);
-            for(typename MContainer::const_iterator iter = m_container.begin(), end = m_container.end(); iter != end; ++iter){
-                integer temp(prod_m);
-                multi(prod_m, temp, *iter);
-            }
-            typename VContainer::const_iterator v_iter = v_container.begin();
-            for(typename MContainer::const_iterator m_iter = m_container.begin(), end = m_container.end(); m_iter != end; ++m_iter, ++v_iter){
-                integer rhs(*m_iter), d, s, v(*v_iter), c_temp;
-                div(d, prod_m, rhs);
-                eea(integer(), s, integer(), d, rhs);
-                integer vs = s * v;
-                c_temp = vs * rhs;
-                if(!c_temp.sign){
-                    unsigned_integer_type &u_temp(c_temp), urhs(rhs);
-                    urhs -= u_temp;
-                    u_temp.assign(urhs);
-                    c_temp.sign = true;
-                }
-                c_sum += c_temp * d;
-            }
-            return result;
-        }
-
-        radix_type lc() const{ return unsigned_integer_type::lc(); }
-
-        static integer &normal(integer &result, const integer &x){
-            if(x == 0){
-                result = 0;
-                return result;
-            }
-            unsigned_integer_type::normal(result, x);
+        static integer &gcd_impl(integer &result, const integer &lhs, const integer &rhs){
+            unsigned_integer_type::gcd_impl(result, lhs, rhs);
             result.sign = true;
             return result;
         }
 
-        void normalize(){
-            unsigned_integer_type::normalize();
-            sign = true;
-        }
-
-        void lu(){
-            if(*this == 0){
-                *this = 1;
-                return;
-            }
-            integer a(*this), na;
-            normal(na, a);
-            div(*this, a, na);
-        }
-
-        radix_type infinity_norm() const{ return unsigned_integer_type::infinity_norm(); }
-
-        integer &norm1(integer &result) const{
-            unsigned_integer_type::norm1(result);
-            result.sign = true;
-            return result;
-        }
-
-        radix_type cont() const{ return unsigned_integer_type::cont(); }
-
-        static integer &pp(integer &result, const integer &x){
-            unsigned_integer_type::pp(result, x);
-            result.sign = true;
-            return result;
-        }
-
-    private:
         static void kar_multi_impl(integer &result, kar_const_pair x, kar_const_pair y){
             std::size_t n = aux::ceil_pow2((std::max)(x.size, y.size));
             if(n < 2){
@@ -550,7 +639,6 @@ namespace cpp_multi_precision{
             sub_iterator_n(rhs.sign, rhs.container.begin(), rhs.container.end(), n);
         }
 
-    private:
         template<bool Rem>
         static integer &monic_div_impl(integer &result, integer &rem, const integer &lhs, const integer &rhs){
             if(!rhs.is_monic()){
@@ -580,33 +668,6 @@ namespace cpp_multi_precision{
             return result;
         }
 
-    public:
-        static integer &gcd_impl(integer &result, const integer &lhs, const integer &rhs){
-            unsigned_integer_type::gcd_impl(result, lhs, rhs);
-            result.sign = true;
-            return result;
-        }
-
-        static integer &inverse(integer &result, const integer &f, std::size_t l){
-            integer &g(result);
-            g = 1;
-            std::size_t r = aux::ceil_log2(l), rem = 1;
-            for(std::size_t i = 0; i < r; ++i){
-                rem <<= 1;
-                integer next_g(g);
-                for(
-                    typename container_type::iterator double_g_iter = next_g.container.begin(), double_g_end = next_g.container.end();
-                    double_g_iter != double_g_end;
-                    ++double_g_iter
-                ){ *double_g_iter = *double_g_iter * 2; }
-                next_g -= f * g * g;
-                if(next_g.container.size() >= rem){ next_g.container.resize(rem - 1); }
-                g = std::move(next_g);
-            }
-            return result;
-        }
-
-    private:
         template<class Ptr, class Char>
         void read_impl(Ptr str, int zero, int nine, int plus, int minus, const Ptr &delim = Ptr()){
             sign = true;

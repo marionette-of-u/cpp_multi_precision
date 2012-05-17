@@ -197,12 +197,6 @@ namespace cpp_multi_precision{
         }
 
     public:
-        static unsigned_integer &div(unsigned_integer &result, unsigned_integer &rem, const unsigned_integer &lhs, const unsigned_integer &rhs){
-            result.assign(lhs);
-            result.div_impl(rhs, rem);
-            return result;
-        }
-
         void radix_shift(std::size_t n){
             container.insert(container.begin(), n, 0);
         }
@@ -215,7 +209,10 @@ namespace cpp_multi_precision{
             }
         }
 
-        radix_type lc() const{ return container.back(); }
+        radix_type lc() const{
+            if(container.size() == 0){ return 0; }
+            return container.back();
+        }
 
         static unsigned_integer &normal(unsigned_integer &result, const unsigned_integer &x){
             result.container = x.container;
@@ -293,13 +290,13 @@ namespace cpp_multi_precision{
         }
 
         void ceil_pow2(){
-            unsigned_integer a(*this);
-            ceil_pow2(*this, a);
+            unsigned_integer a(std::move(*this));
+            ceil_pow2(*this, std::move(a));
         }
 
         std::size_t ceil_log2() const{
             radix_type x = container.back();
-            std::size_t n = aux::index_of_leftmost_flag(x);
+            std::size_t n = aux::index_of_leftmost_flag(x) + 1;
             if((x & aux::ceil_pow2(x)) != 0){
                 return (container.size() - 1) * radix_log2 + n + 1;
             }
@@ -319,18 +316,6 @@ namespace cpp_multi_precision{
             return result;
         }
 
-        static radix_type gcd(radix_type a, radix_type b){
-            if(a < b){ std::swap(a, b); }
-            if(b == 1){ return b; }
-            radix_type c;
-            for(; ; ){
-                c = a % b;
-                if(c == 0){ return b; }
-                a = b, b = c;
-            }
-            return c;
-        }
-
         static unsigned_integer &gcd(unsigned_integer &result, const unsigned_integer &lhs, const unsigned_integer &rhs){
             if(lhs >= rhs){
                 return gcd_impl(result, lhs, rhs);
@@ -339,7 +324,58 @@ namespace cpp_multi_precision{
             }
         }
 
+        static unsigned_integer &pow(unsigned_integer &result, const unsigned_integer &x, const unsigned_integer &y){
+            return pow_impl<unsigned_integer>(result, x, y, square_multi);
+        }
+
+        static unsigned_integer &root(unsigned_integer &result, const unsigned_integer &a){
+            result = a >> 1;
+            unsigned_integer prev_x = result;
+            do{
+                prev_x = result;
+                result = (result + a / result) >> 1;
+                if(result * result <= a){ break; }
+            }while(prev_x != result);
+            return result;
+        }
+
+        radix_type n_bit(std::size_t n) const{
+            return (container[n / radix_log2] >> (n % radix_log2)) & 1;
+        }
+
+        std::size_t bit_num() const{
+            std::size_t i = 0;
+            radix_type t = container.back();
+            while(t >>= 1){ ++i; }
+            return i + (container.size() - 1) * radix_log2;
+        }
+
+        static const unsigned_integer &max(const unsigned_integer &a, const unsigned_integer &b){
+            return a > b ? a : b;
+        }
+
+        static const unsigned_integer &min(const unsigned_integer &a, const unsigned_integer &b){
+            return a < b ? a : b;
+        }
+
+    protected:
         const container_type &get_container() const{ return container; }
+
+        bool less(const typename container_type::const_iterator &rhs_it, const typename container_type::const_iterator &rhs_end) const{
+            return base_less_eq(false, rhs_it, rhs_end);
+        }
+
+        bool less_eq(const typename container_type::const_iterator &rhs_it, const typename container_type::const_iterator &rhs_end) const{
+            return base_less_eq(true, rhs_it, rhs_end);
+        }
+
+        bool greater(const typename container_type::const_iterator &rhs_it, const typename container_type::const_iterator &rhs_end) const{
+            return base_greater_eq(false, rhs_it, rhs_end);
+        }
+
+        bool greater_eq(const typename container_type::const_iterator &rhs_it, const typename container_type::const_iterator &rhs_end) const{
+            return base_greater_eq(true, rhs_it, rhs_end);
+        }
 
         static unsigned_integer &multi(unsigned_integer &result, const unsigned_integer &lhs, unsigned_radix2_type rhs){
             return multi(result, lhs.container.begin(), lhs.container.end(), rhs);
@@ -362,43 +398,6 @@ namespace cpp_multi_precision{
             r >>= radix_log2;
             if(r > 0){ result.container.push_back(static_cast<radix_type>(r)); }    
             return result;
-        }
-
-        static unsigned_integer &pow(unsigned_integer &result, const unsigned_integer &x, const unsigned_integer &y){
-            return pow_impl<unsigned_integer>(result, x, y, square_multi);
-        }
-
-        radix_type n_bit(std::size_t n) const{ return (container[n / radix_log2] >> (n % radix_log2)) & 1; }
-        std::size_t bit_num() const{
-            std::size_t i = 0;
-            radix_type t = container.back();
-            while(t >>= 1){ ++i; }
-            return i + (container.size() - 1) * radix_log2;
-        }
-
-        static const unsigned_integer &max(const unsigned_integer &a, const unsigned_integer &b){
-            return a > b ? a : b;
-        }
-
-        static const unsigned_integer &min(const unsigned_integer &a, const unsigned_integer &b){
-            return a < b ? a : b;
-        }
-
-    protected:
-        bool less(const typename container_type::const_iterator &rhs_it, const typename container_type::const_iterator &rhs_end) const{
-            return base_less_eq(false, rhs_it, rhs_end);
-        }
-
-        bool less_eq(const typename container_type::const_iterator &rhs_it, const typename container_type::const_iterator &rhs_end) const{
-            return base_less_eq(true, rhs_it, rhs_end);
-        }
-
-        bool greater(const typename container_type::const_iterator &rhs_it, const typename container_type::const_iterator &rhs_end) const{
-            return base_greater_eq(false, rhs_it, rhs_end);
-        }
-
-        bool greater_eq(const typename container_type::const_iterator &rhs_it, const typename container_type::const_iterator &rhs_end) const{
-            return base_greater_eq(true, rhs_it, rhs_end);
         }
 
         static unsigned_integer &square_multi(unsigned_integer &result, const unsigned_integer &lhs, const unsigned_integer &rhs, bool is_float = false){
@@ -431,6 +430,12 @@ namespace cpp_multi_precision{
                     result.add_radix_n(static_cast<unsigned_radix2_type>(lhs) * rhs, n + m);
                 }
             }
+            return result;
+        }
+
+        static unsigned_integer &div(unsigned_integer &result, unsigned_integer &rem, const unsigned_integer &lhs, const unsigned_integer &rhs){
+            result.assign(lhs);
+            result.div_impl(rhs, rem);
             return result;
         }
 
