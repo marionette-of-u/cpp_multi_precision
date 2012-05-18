@@ -895,7 +895,10 @@ namespace cpp_multi_precision{
         static sparse_poly &square_div(sparse_poly &q, sparse_poly &r, const sparse_poly &a, const sparse_poly &b){
             r = a;
             q = 0;
-            if(a < b){ return q; }
+            if(
+                a.container.size() < b.container.size() ||
+                (!a.container.empty() && (a.container.rbegin()->first < b.container.rbegin()->first))
+            ){ return q; }
             const order_type &m(b.container.rbegin()->first);
             const coefficient_type &u(b.lc());
             for(typename container_type::reverse_iterator iter = r.container.rbegin(); ; ){
@@ -909,10 +912,12 @@ namespace cpp_multi_precision{
                     }else{
                         continue;
                     }
+                }else{
+                    q.addition_order_coe(n, qn);
+                    r.sub_n_q(b, n, qn);
+                    if(r.container.empty()){ break; }
+                    iter = r.container.rbegin();
                 }
-                q.addition_order_coe(n, qn);
-                r.sub_n_q(b, n, qn);
-                if(r.container.empty()){ break; }
             }
             return q;
         }
