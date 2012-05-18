@@ -478,6 +478,34 @@ namespace cpp_multi_precision{
             return std::move(r);
         }
 
+        static sparse_poly &modular_eea(
+            sparse_poly &result,
+            sparse_poly &c_lhs,
+            sparse_poly &c_rhs,
+            const sparse_poly &f,
+            const sparse_poly &g,
+            const sparse_poly &p
+        ){
+            if(f >= g){
+                modular_eea_impl(result, c_lhs, c_rhs, f, g, p);
+            }else{
+                modular_eea_impl(result, c_rhs, c_lhs, g, f, p);
+            }
+            return result;
+        }
+
+        static sparse_poly modular_eea(
+            sparse_poly &c_rhs,
+            sparse_poly &c_lhs,
+            const sparse_poly &f,
+            const sparse_poly &g,
+            const sparse_poly &p
+        ){
+            sparse_poly r;
+            modular_eea(r, c_rhs, c_lhs, f, g, p);
+            return std::move(r);
+        }
+
         const order_type &deg() const{ return container.rbegin()->first; }
 
         const coefficient_type &lc() const{ return container.rbegin()->second; }
@@ -576,16 +604,17 @@ namespace cpp_multi_precision{
             return std::move(r);
         }
 
-        static sparse_poly &modular_inverse(sparse_poly &result, const sparse_poly &a, const coefficient_type &m){
+        static sparse_poly &modular_inverse(sparse_poly &result, const sparse_poly &a, const sparse_poly &m){
             result = 0;
-            eea(sparse_poly(), result, sparse_poly(), a, m);
+            eea_classic(sparse_poly(), result, sparse_poly(), a, m);
             if(result < 0){ result += m; }
             return result;
         }
 
-        sparse_poly modular_inverse(const coefficient_type &m) const{
+        sparse_poly modular_inverse(const sparse_poly &m) const{
             sparse_poly result;
-            return std::move(modular_inverse(result, *this, m));
+            modular_inverse(result, *this, m);
+            return std::move(result);
         }
 
         coefficient_type &cont(coefficient_type &result) const{
@@ -868,12 +897,19 @@ namespace cpp_multi_precision{
             q = 0;
             if(a < b){ return q; }
             const order_type &m(b.container.rbegin()->first);
-            const coefficient_type &u(b.container.rbegin()->second);
-            for(; ; ){
-                order_type n = r.container.rbegin()->first - m;
+            const coefficient_type &u(b.lc());
+            for(typename container_type::reverse_iterator iter = r.container.rbegin(); ; ){
+                order_type n = iter->first - m;
                 if(n < 0){ break; }
                 coefficient_type qn = r.lc() / u;
-                if(qn == 0){ break; }
+                if(qn == 0){
+                    iter = typename container_type::reverse_iterator(r.container.erase((++iter).base()));
+                    if(iter == r.container.rend()){
+                        break;
+                    }else{
+                        continue;
+                    }
+                }
                 q.addition_order_coe(n, qn);
                 r.sub_n_q(b, n, qn);
                 if(r.container.empty()){ break; }
@@ -915,8 +951,8 @@ namespace cpp_multi_precision{
                 rhs_end = rhs_container.rend();
             bool end_l = lhs_iter == lhs_end, end_r = rhs_iter == rhs_end;
             if(!end_l || !end_r){
-                if(end_l && !end_r){ return false; }
-                if(!end_l && end_r){ return true; }
+                if(end_l && !end_r){ return true; }
+                if(!end_l && end_r){ return false; }
                 for(; lhs_iter != lhs_end && rhs_iter != rhs_end; ++lhs_iter, ++rhs_iter){
                     const order_type &lhs_order(lhs_iter->first), &rhs_order(rhs_iter->first);
                     if(lhs_order == rhs_order){
@@ -946,8 +982,8 @@ namespace cpp_multi_precision{
                 rhs_end = rhs_container.rend();
             bool end_l = lhs_iter == lhs_end, end_r = rhs_iter == rhs_end;
             if(!end_l || !end_r){
-                if(end_l && !end_r){ return true; }
-                if(!end_l && end_r){ return false; }
+                if(end_l && !end_r){ return false; }
+                if(!end_l && end_r){ return true; }
                 for(; lhs_iter != lhs_end && rhs_iter != rhs_end; ++lhs_iter, ++rhs_iter){
                     const order_type &lhs_order(lhs_iter->first), &rhs_order(rhs_iter->first);
                     if(lhs_order == rhs_order){
@@ -1225,6 +1261,35 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        //static sparse_poly &modular_eea_impl(
+        //    sparse_poly &result,
+        //    sparse_poly &c_lhs,
+        //    sparse_poly &c_rhs,
+        //    const sparse_poly &f,
+        //    const sparse_poly &g,
+        //    const sparse_poly &p
+        //){
+        //    sparse_poly
+        //        rho_0 = f.lc(), rho_1 = g.lc(),
+        //        r_0 = f.normal(), r_1 = g.normal(),
+        //        s_0 = rho_0.modular_inverse(p), s_1 = coefficient_type(0),
+        //        t_0 = coefficient_type(0), t_1 = rho_1.modular_inverse(p);
+        //    while(!r_1.container.empty()){
+        //        sparse_poly q = r_0 * r_1.modular_inverse(p);
+        //        sparse_poly rho_m = rho_1, r_m = r_1, s_m = s_1, t_m = t_1;
+        //        rho_1 = (r_0  - q * r_1).lu();
+        //        sparse_poly inv_rho_1 = rho_1.modular_inverse(p);
+        //        r_1 = ((r_0 - q * r_1) * inv_rho_1) % p;
+        //        s_1 = ((s_0 - q * s_1) * inv_rho_1) % p;
+        //        t_1 = ((t_0 - q * t_1) * inv_rho_1) % p;
+        //        rho_0 = std::move(rho_m);
+        //        r_0 = std::move(r_m);
+        //        s_0 = std::move(s_m);
+        //        t_0 = std::move(t_m);
+        //    }
+        //    return result;
+        //}
+
         static sparse_poly &eea_default_impl(
             sparse_poly &result,
             sparse_poly &c_lhs,
@@ -1251,7 +1316,7 @@ namespace cpp_multi_precision{
             while(!r_1.container.empty()){
                 sparse_poly q = r_0 / r_1, r_m = r_1, s_m = s_1, t_m = t_1, rho_m = rho_1;
                 rho_1 = r_0 - q * r_1;
-                rho_1.lu();
+                rho_1 = rho_1.lu();
                 r_1 = (r_0 - q * r_1) / rho_1;
                 s_1 = (s_0 - q * s_1) / rho_1;
                 t_1 = (t_0 - q * t_1) / rho_1;

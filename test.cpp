@@ -87,6 +87,14 @@ void test_sparse_poly(){
 
     std::cout << "start test_sparse_poly\n";
 
+    z_field_sparse_poly za, zb, zs, zt;
+    za [2](1) [1](2) [0](1);
+    //zb [2](1) [1](3) [0](2);
+    zb [0](7);
+    std::cout << za / zb << "\n";
+    //std::cout << z_field_sparse_poly::modular_eea(zs, zt, za, zb, z_field_sparse_poly(7)) << "\n";
+    //std::cout << zs << " : " << zt << "\n";
+
     sparse_poly poly_a, poly_b, poly_c, poly_r, poly_cl, poly_cr;
     // a += 18 * x^3
     poly_a[3] = 18;
@@ -371,13 +379,13 @@ void test_prime_list(){
 }
 
 int main(){
-    test_prime_list();
-    test_modular();
-    test_simple_sparse_poly();
+    //test_prime_list();
+    //test_modular();
+    //test_simple_sparse_poly();
     test_sparse_poly();
-    test_rational();
-    test_integer();
-    test_modular_and_poly();
+    //test_rational();
+    //test_integer();
+    //test_modular_and_poly();
 
     return 0;
 }
