@@ -406,8 +406,9 @@ namespace cpp_multi_precision{
             return std::move(r);
         }
 
-        integer normalize(){
+        integer &normalize(){
             *this = normal();
+            return *this;
         }
 
         integer lu(){
