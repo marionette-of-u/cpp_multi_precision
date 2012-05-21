@@ -90,12 +90,11 @@ void test_sparse_poly(){
     z_field_sparse_poly za, zb, zs, zt;
     //za [2](-1) [1](2) [0](1);
     //zb [2](1) [1](3) [0](2);
-    za [4](1);
-    zb [3](4) [2](3) [1](2) [0](1);
-    //std::cout << z_field_sparse_poly::modular_eea(zs, zt, za, zb, 7) << "\n";
-    std::cout << "gcd =" << z_field_sparse_poly::modular_eea(zs, zt, za, zb, 5) << "\n";
-    std::cout << "beout coefficient = " << zs << " : " << zt << "\n";
-    std::cout << (za * zs + zb * zt).mod_coefficient(5) << "\n";
+    za [2](3) [1](3) [0](1);
+    zb [3](1) [2](2) [1](2);
+    std::cout << "gcd = " << z_field_sparse_poly::modular_eea(zs, zt, za, zb, 5) << "\n";
+    std::cout << "bezout coefficient = " << zs << " : " << zt << "\n";
+    std::cout << "gcd (linear combination) = " << (za * zs + zb * zt).mod_coefficient(5) << "\n";
 
     sparse_poly poly_a, poly_b, poly_c, poly_r, poly_cl, poly_cr;
     // a += 18 * x^3
