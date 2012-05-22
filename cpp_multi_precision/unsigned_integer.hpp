@@ -297,18 +297,16 @@ namespace cpp_multi_precision{
 
         std::size_t ceil_log2() const{
             radix_type x = container.back();
-            std::size_t n = aux::index_of_leftmost_flag(x) + 1;
-            if((x & aux::ceil_pow2(x)) != 0){
-                return (container.size() - 1) * radix_log2 + n + 1;
+            if(x == 0){ return 0; }
+            std::size_t n = aux::index_of_leftmost_flag(x) + 1, m = (container.size() - 1) * radix_log2;
+            for(std::size_t i = 0, length = n - 1; i < length; ++i){
+                if(((x >> i) & 1) == 1){ return n + m + 1; }
             }
-            std::size_t m = 0;
-            for(typename container_type::const_iterator iter = container.begin(), end = container.end() - 1; iter != end; ++iter){
-                if(*iter != 0){
-                    m = 1;
-                    break;
-                }
+            typename container_type::const_iterator iter = container.begin(), end = container.end() - 1;
+            for(; iter != end; ++iter){
+                if(*iter != 0){ return n + m + 1; }
             }
-            return (container.size() - 1) * radix_log2 + n + m;
+            return n + m;
         }
 
         static unsigned_integer &pp(unsigned_integer &result, const unsigned_integer &x){
@@ -330,6 +328,10 @@ namespace cpp_multi_precision{
         }
 
         static unsigned_integer &sqrt(unsigned_integer &result, const unsigned_integer &a){
+            if(a == 1){
+                result = 1;
+                return result;
+            }
             result = a >> 1;
             unsigned_integer prev_x = result;
             do{

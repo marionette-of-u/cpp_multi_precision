@@ -88,13 +88,19 @@ void test_sparse_poly(){
     std::cout << "start test_sparse_poly\n";
 
     z_field_sparse_poly za, zb, zs, zt;
-    //za [2](-1) [1](2) [0](1);
-    //zb [2](1) [1](3) [0](2);
-    za [2](3) [1](3) [0](1);
-    zb [3](1) [2](2) [1](2);
-    std::cout << "gcd = " << z_field_sparse_poly::modular_eea(zs, zt, za, zb, 5) << "\n";
+    
+    // modulus == 7
+    za [2](1) [1](2) [0](1);
+    zb [2](1) [1](3) [0](2);
+    std::cout << "gcd = " << z_field_sparse_poly::modular_eea(zs, zt, za, zb, 7) << "\n";
     std::cout << "bezout coefficient = " << zs << " : " << zt << "\n";
-    std::cout << "gcd (linear combination) = " << (za * zs + zb * zt).mod_coefficient(5) << "\n";
+    std::cout << "gcd (linear combination) = " << (za * zs + zb * zt).mod_coefficient(7) << "\n";
+
+    // 壊れてます
+    za = 0, zb = 0;
+    za [1](3) [0](2);
+    zb [1](3) [0](2);
+    std::cout << z_field_sparse_poly::primitive_gcd(za, zb) << "\n";
 
     sparse_poly poly_a, poly_b, poly_c, poly_r, poly_cl, poly_cr;
     // a += 18 * x^3
@@ -360,18 +366,18 @@ void test_prime_list(){
     std::cout << "start test_prime_list\n";
 
     typedef cpp_multi_precision::aux::prime_list<unsigned int> prime_list32_type;
-    std::vector<unsigned int> r32 = prime_list32_type::get_prime_set(0x382b6b + 2, 10).first;
+    std::vector<unsigned int> r32 = prime_list32_type::get_prime_set(0x382b6b + 2, 10);
     for(auto iter = r32.begin(), end = r32.end(); iter != end; ++iter){
         std::cout << *iter << "\n";
     }
     std::cout << "\n";
-    r32 = prime_list32_type::get_prime_set(0x382b6b + 9999, 5).first;
+    r32 = prime_list32_type::get_prime_set(0x382b6b + 9999, 5);
     for(auto iter = r32.begin(), end = r32.end(); iter != end; ++iter){
         std::cout << *iter << "\n";
     }
     std::cout << "\n";
     typedef cpp_multi_precision::aux::prime_list<unsigned long long> prime_list64_type;
-    std::vector<unsigned long long> r64 = prime_list64_type::get_prime_set(0x10058b727 + 100, 10).first;
+    std::vector<unsigned long long> r64 = prime_list64_type::get_prime_set(0x10058b727 + 100, 10);
     for(auto iter = r64.begin(), end = r64.end(); iter != end; ++iter){
         std::cout << *iter << "\n";
     }

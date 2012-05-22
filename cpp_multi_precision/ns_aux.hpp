@@ -212,7 +212,7 @@ namespace cpp_multi_precision{
             typedef Type value_type;
             typedef std::vector<value_type> ext_prime_vec_type;
 
-            static std::pair<std::vector<value_type>, value_type> get_prime_set(value_type k, std::size_t n){
+            static std::vector<value_type> get_prime_set(value_type k, std::size_t n){
                 table(0);
                 value_type u;
                 std::vector<value_type> r;
@@ -240,7 +240,7 @@ namespace cpp_multi_precision{
                     }
                     u = table(index + 1);
                 }
-                return std::make_pair(std::move(r), u);
+                return std::move(r);
             }
 
             static std::size_t push_ext_prime(value_type k){
@@ -340,15 +340,13 @@ namespace cpp_multi_precision{
             typedef std::vector<value_type> ext_prime_vec_type;
             typedef prime_list<value_type, 32> prime32_type;
 
-            static std::pair<std::vector<value_type>, value_type> get_prime_set(value_type k, std::size_t n){
+            static std::vector<value_type> get_prime_set(value_type k, std::size_t n){
                 table(0);
-                value_type u;
                 std::vector<value_type> r;
                 r.resize(n);
                 if(k < range_lower_bound()){
-                    std::pair<ext_prime_vec_type, value_type> pair_set_u(prime32_type::get_prime_set(k, n));
-                    r = std::move(pair_set_u.first);
-                    u = pair_set_u.second;
+                    ext_prime_vec_type pair_set_u(prime32_type::get_prime_set(k, n));
+                    r = std::move(pair_set_u);
                 }else if(k <= range_upper_bound()){
                     std::size_t index = get_table_index(k);
                     if(index >= n){
@@ -360,12 +358,11 @@ namespace cpp_multi_precision{
                             r[n - i - 1] = table(index - i);
                         }
                         std::size_t m = n - index;
-                        std::vector<value_type> rest(std::move(prime32_type::get_prime_set(range_lower_bound(), m).first));
+                        std::vector<value_type> rest(std::move(prime32_type::get_prime_set(range_lower_bound(), m)));
                         for(std::size_t j = 0; j < m; ++j){
                             r[m - j - 1] = rest[m - j - 1];
                         }
                     }
-                    u = table(index + 1);
                 }else{
                     std::size_t index = push_ext_prime(k);
                     if(index == 0){ index = get_ext_index(k); }
@@ -381,9 +378,8 @@ namespace cpp_multi_precision{
                             r[n - i - 1] = ext_prime_vec()[index - i - 1];
                         }
                     }
-                    u = table(index + 1);
                 }
-                return std::make_pair(std::move(r), u);
+                return std::move(r);
             }
 
             static std::size_t push_ext_prime(value_type k){
