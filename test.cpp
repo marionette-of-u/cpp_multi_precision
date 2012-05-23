@@ -92,14 +92,14 @@ void test_sparse_poly(){
     // modulus == 7
     za [2](1) [1](2) [0](1);
     zb [2](1) [1](3) [0](2);
-    std::cout << "gcd = " << z_field_sparse_poly::modular_eea(zs, zt, za, zb, 7) << "\n";
+    std::cout << "modular gcd = " << z_field_sparse_poly::modular_eea(zs, zt, za, zb, 7) << "\n";
     std::cout << "bezout coefficient = " << zs << " : " << zt << "\n";
-    std::cout << "gcd (linear combination) = " << (za * zs + zb * zt).mod_coefficient(7) << "\n";
+    std::cout << "modular gcd (linear combination) = " << (za * zs + zb * zt).mod_coefficient(7) << "\n";
 
     // 壊れてます
     za = 0, zb = 0;
-    za [2](3) [0](2);
-    zb [2](3) [0](2);
+    za [10](5) [2](3) [0](2);
+    zb [10](5);
     //za [3](8161) [2](8167) [1](8171) [0](8179);
     //zb [3](8161) [2](8167) [1](8171) [0](8179);
     std::cout << z_field_sparse_poly::primitive_gcd(za, zb) << "\n";

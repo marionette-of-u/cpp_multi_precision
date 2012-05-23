@@ -474,15 +474,24 @@ namespace cpp_multi_precision{
         };
 
         template<class T>
-        T gcd(T a, T b){
+        T gcd_impl(T a, T b){
             if(b == 1){ return b; }
             T c;
             for(; ; ){
-                c = a - a / b;
-                if(c == 0){ return b; }
+                c = a - (a / b * b);
+                if(c == 0){ break; }
                 a = b, b = c;
             }
-            return std::move(c);
+            return std::move(b);
+        }
+
+        template<class T>
+        T gcd(T a, T b){
+            if(a >= b){
+                return gcd_impl(a, b);
+            }else{
+                return gcd_impl(b, a);
+            }
         }
 
         template<class T>
