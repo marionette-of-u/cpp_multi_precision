@@ -616,6 +616,14 @@ namespace cpp_multi_precision{
             return *this / na;
         }
 
+        coefficient_type norm1() const{
+            coefficient_type s;
+            for(typename container_type::const_iterator iter = container.begin(), end = container.end(); iter != end; ++iter){
+                s += abs_dispatch(iter->second);
+            }
+            return std::move(s);
+        }
+
         coefficient_type infinity_norm() const{
             coefficient_type r = 0;
             for(typename container_type::const_iterator iter = container.begin(), end = container.end(); iter != end; ++iter){
@@ -632,8 +640,7 @@ namespace cpp_multi_precision{
 
         static sparse_poly &pp(sparse_poly &result, const sparse_poly &x){
             result = x;
-            coefficient_type c;
-            x.cont(c);
+            coefficient_type c = x.cont();
             if(c == 1){ return result; }
             for(
                 typename container_type::iterator iter = result.container.begin(), end = result.container.end();
@@ -706,7 +713,8 @@ namespace cpp_multi_precision{
             return std::move(r);
         }
 
-        coefficient_type &cont(coefficient_type &result) const{
+        coefficient_type cont() const{
+            coefficient_type result;
             if(container.empty()){
                 result = coefficient_type(0);
                 return result;
@@ -722,7 +730,7 @@ namespace cpp_multi_precision{
                 result = std::move(temp);
                 if(result == 1){ break; }
             }
-            return result;
+            return std::move(result);
         }
 
         static sparse_poly &gcd(sparse_poly &result, const sparse_poly &f, const sparse_poly &g){
@@ -761,9 +769,9 @@ namespace cpp_multi_precision{
             }
             for(std::size_t i = 0, r = m_container.size(); i < r; ++i){
                 coefficient_type m_div_mi = m / m_container[i];
-                sparse_poly euclid_result, t, s;
-                eea_classic(euclid_result, s, t, sparse_poly(m_div_mi), sparse_poly(m_container[i]));
-                ret += m_div_mi * ((v_container[i] * s) % m_container[i]);
+                coefficient_type s = cra_inner_eea(m_div_mi, m_container[i]);
+                sparse_poly c = ((v_container[i] * (s < 0 ? m_container[i] + s : s)) % m_container[i]);
+                ret += m_div_mi * c;
             }
             return std::move(ret);
         }
@@ -917,8 +925,23 @@ namespace cpp_multi_precision{
             return aux::ceil_log2(x);
         }
 
-#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_SIGN template<class T, bool Sign>
+#define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_SIGN template<class T, aux::sign T::*Sign>
         CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(sign, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_SIGN);
+        template<class T>
+        static T abs_dispatch(const T x, typename boost::enable_if<has_sign<T>>::type* = nullptr){
+            x.sign = true;
+            return std::move(x);
+        }
+
+        template<class T>
+        static T abs_dispatch(const T x, typename boost::disable_if<has_sign<T>>::type* = nullptr){
+            if(x >= 0){
+                return std::move(x);
+            }else{
+                return std::move(-x);
+            }
+        }
+
         template<class T>
         static bool get_sign_dispatch(const T &x, typename boost::enable_if<has_sign<T>>::type* = nullptr){
             return x.sign;
@@ -1440,6 +1463,44 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        static coefficient_type cra_inner_eea(const coefficient_type &f, const coefficient_type &g){
+            coefficient_type s, t;
+            if(f >= g){
+                cra_inner_eea_impl(s, t, f, g);
+            }else{
+                cra_inner_eea_impl(t, s, g, f);
+            }
+            return std::move(s);
+        }
+
+        static void cra_inner_eea_impl(
+            coefficient_type &s,
+            coefficient_type &t,
+            const coefficient_type &f,
+            const coefficient_type &g
+        ){
+            coefficient_type
+                r_0 = f, r_1 = g,
+                s_0 = coefficient_type(1), s_1 = coefficient_type(0),
+                t_0 = coefficient_type(0), t_1 = coefficient_type(1);
+            while(r_1 != 0){
+                coefficient_type q = r_0 / r_1, r_m = r_1, s_m = s_1, t_m = t_1;
+                if(q == 0){
+                    s = 0;
+                    t = 1 / g;
+                    return;
+                }
+                r_1 = r_0 - q * r_1;
+                s_1 = s_0 - q * s_1;
+                t_1 = t_0 - q * t_1;
+                r_0 = std::move(r_m);
+                s_0 = std::move(s_m);
+                t_0 = std::move(t_m);
+            }
+            s = std::move(s_0);
+            t = std::move(t_0);
+        }
+
         static sparse_poly &eea_default_impl(
             sparse_poly &result,
             sparse_poly &c_lhs,
@@ -1600,7 +1661,7 @@ namespace cpp_multi_precision{
                     pow_dispatch(coefficient_type(n) + 1, coefficient_type(n)) *
                     b *
                     pow_dispatch(large_a, 2 * coefficient_type(n))
-                ),
+                ) + 1,
                 large_b = sqrt_dispatch(n + 1) * pow_dispatch(coefficient_type(2), coefficient_type(n)) * large_a * b,
                 l = ceil_log2_dispatch(coefficient_type(2) * large_b + coefficient_type(1));
             double double_k = to_double_dispatch(k);
@@ -1656,6 +1717,33 @@ namespace cpp_multi_precision{
                     if(iter != set.end()){ set.erase(iter); }
                 }
             }
+            sparse_poly w;
+
+            //{
+            //    sparse_poly bf = b * f, bg = b * g, f_star, g_star;
+            //    coefficient_type w_norm1;
+            //    std::vector<coefficient_type> m;
+            //    std::vector<sparse_poly> v;
+            //    m.reserve(1), v.reserve(1);
+            //    std::size_t i = 0;
+            //    do{
+            //        m.push_back(set[set.size() - i - 1]);
+            //        v.push_back(v_set[v_set.size() - i - 1] * b);
+            //        w = cra(m, v);
+            //        w_norm1 = w.norm1();
+            //        v.clear();
+            //        v.push_back(bf);
+            //        f_star = cra(m, v) / w;
+            //        v.clear();
+            //        v.push_back(bg);
+            //        g_star = cra(m, v) / w;
+            //        m.clear();
+            //        v.clear();
+            //        ++i;
+            //    }while(f_star.norm1() * w_norm1 <= large_b && g_star.norm1() * w_norm1 <= large_b);
+            //}
+            //result = w.pp();
+
             for(std::size_t i = 0, length = v_set.size(); i < length; ++i){
                 std::cout << set[i] << "\n";
             }
@@ -1664,6 +1752,7 @@ namespace cpp_multi_precision{
                 std::cout << v_set[i] << "\n";
             }
             result = cra(set, v_set).pp();
+
             return result;
         }
 

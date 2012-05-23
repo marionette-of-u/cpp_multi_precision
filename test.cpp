@@ -98,8 +98,10 @@ void test_sparse_poly(){
 
     // 壊れてます
     za = 0, zb = 0;
-    za [1](3) [0](2);
-    zb [1](3) [0](2);
+    za [2](3) [0](2);
+    zb [2](3) [0](2);
+    //za [3](8161) [2](8167) [1](8171) [0](8179);
+    //zb [3](8161) [2](8167) [1](8171) [0](8179);
     std::cout << z_field_sparse_poly::primitive_gcd(za, zb) << "\n";
 
     sparse_poly poly_a, poly_b, poly_c, poly_r, poly_cl, poly_cr;
