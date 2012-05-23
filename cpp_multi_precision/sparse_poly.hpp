@@ -553,6 +553,10 @@ namespace cpp_multi_precision{
             }
         }
 
+        const order_type &ref_deg() const{
+            return container.rbegin()->first;
+        }
+
         const coefficient_type &lc() const{ return container.rbegin()->second; }
 
         static sparse_poly &normal(sparse_poly &result, const sparse_poly &x){
@@ -674,7 +678,7 @@ namespace cpp_multi_precision{
                     double_g_iter->second = coe_double_g * 2;
                 }
                 next_g -= f * g * g;
-                if(next_g.deg() >= rem){
+                if(next_g.ref_deg() >= rem){
                     next_g.container.erase(next_g.container.find(rem), next_g.container.end());
                 }
                 g = std::move(next_g);
@@ -1040,8 +1044,8 @@ namespace cpp_multi_precision{
         ){
             r = a;
             q.container.clear();
-            if(a.deg() < b.deg()){ return q; }
-            const order_type m(b.deg());
+            if(a.ref_deg() < b.ref_deg()){ return q; }
+            const order_type &m(b.ref_deg());
             const coefficient_type &u(b.lc());
             for(typename container_type::reverse_iterator iter = r.container.rbegin(); ; ){
                 order_type n = iter->first - m;
@@ -1049,7 +1053,7 @@ namespace cpp_multi_precision{
                 coefficient_type qn = div(iter->second, u);
                 coe_modulo(qn);
                 if(qn == 0){
-                    if(r.deg() <= b.deg()){ break; }
+                    if(r.ref_deg() <= b.ref_deg()){ break; }
                     ++iter;
                     if(iter == r.container.rend()){ break; }else{ continue; }
                 }else{
@@ -1218,7 +1222,7 @@ namespace cpp_multi_precision{
             if(f.container.empty() || g.container.empty()){
                 return sparse_poly();
             }
-            const order_type order_f(f.deg()), order_g(g.deg());
+            const order_type &order_f(f.ref_deg()), &order_g(g.ref_deg());
             order_type n;
             ceil_pow2_dispatch(n, order_f > order_g ? order_f : order_g);
             if(n < 2){
@@ -1298,11 +1302,11 @@ namespace cpp_multi_precision{
                 return square_div(result, rem, lhs, rhs, modulo_default(), modulo_default(), divisor_default());
             }
             result.container.clear();
-            if(rhs.deg() > lhs.deg()){
+            if(rhs.ref_deg() > lhs.ref_deg()){
                 if(Rem){ rem.assign(lhs); }
                 return result;
             }
-            order_type m(lhs.deg() - rhs.deg());
+            order_type m(lhs.ref_deg() - rhs.ref_deg());
             sparse_poly inv_rev_rhs;
             {
                 sparse_poly rev_rhs;
@@ -1322,7 +1326,8 @@ namespace cpp_multi_precision{
 
         static void rev(sparse_poly &result, const sparse_poly &a){
             result.container.clear();
-            const order_type order(a.deg());
+            if(a.container.empty()){ return; }
+            const order_type &order(a.ref_deg());
             for(
                 typename container_type::const_reverse_iterator iter = a.container.rbegin(),
                 end = a.container.rend();
@@ -1394,13 +1399,13 @@ namespace cpp_multi_precision{
             if(g.container.empty()){ return result; }
             sparse_poly r_0, r_1;
             bool zero_flag[2] = { false, false };
-            if(f.deg() > 0){
+            if(f.ref_deg() > 0){
                 normal(r_0, f);
             }else{
                 r_0 = f;
                 zero_flag[0] = true;
             }
-            if(g.deg() > 0){
+            if(g.ref_deg() > 0){
                 normal(r_1, g);
             }else{
                 r_1 = g;
@@ -1564,8 +1569,7 @@ namespace cpp_multi_precision{
                             r %= p;
                         },
                         [&](const coefficient_type &x, const coefficient_type &y) -> coefficient_type{
-                            coefficient_type n = x * coefficient_inverse(y, p);
-                            return n % p;
+                            return x * coefficient_inverse(y, p) % p;
                         }
                     );
                 }
