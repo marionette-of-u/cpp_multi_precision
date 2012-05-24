@@ -765,15 +765,18 @@ namespace cpp_multi_precision{
         }
 
         template<class MContainer, class VContainer>
-        static sparse_poly cra(const MContainer &m_container, const VContainer &v_container){
-            coefficient_type m = 1;
-            sparse_poly ret;
+        static typename VContainer::value_type cra(const MContainer &m_container, const VContainer &v_container){
+            typedef typename MContainer::value_type m_type;
+            typedef typename VContainer::value_type v_type;
+            m_type m = 1;
+            v_type ret;
             for(typename MContainer::const_iterator iter = m_container.begin(), end = m_container.end(); iter != end; ++iter){
                 m *= *iter;
             }
             for(std::size_t i = 0, r = m_container.size(); i < r; ++i){
-                coefficient_type m_div_mi = m / m_container[i];
-                coefficient_type s = cra_inner_eea(m_div_mi, m_container[i]);
+                m_type
+                    m_div_mi = m / m_container[i],
+                    s = cra_inner_eea(m_div_mi, m_container[i]);
                 ret += m_div_mi * ((v_container[i] * (s < 0 ? m_container[i] + s : s)) % m_container[i]);
             }
             return std::move(ret);
@@ -1463,8 +1466,9 @@ namespace cpp_multi_precision{
             return result;
         }
 
-        static coefficient_type cra_inner_eea(const coefficient_type &f, const coefficient_type &g){
-            coefficient_type s, t;
+        template<class ValueType>
+        static ValueType cra_inner_eea(const ValueType &f, const ValueType &g){
+            ValueType s, t;
             if(f >= g){
                 cra_inner_eea_impl(s, t, f, g);
             }else{
@@ -1473,18 +1477,14 @@ namespace cpp_multi_precision{
             return std::move(s);
         }
 
-        static void cra_inner_eea_impl(
-            coefficient_type &s,
-            coefficient_type &t,
-            const coefficient_type &f,
-            const coefficient_type &g
-        ){
-            coefficient_type
+        template<class ValueType>
+        static void cra_inner_eea_impl(ValueType &s, ValueType &t, const ValueType &f, const ValueType &g){
+            ValueType
                 r_0 = f, r_1 = g,
-                s_0 = coefficient_type(1), s_1 = coefficient_type(0),
-                t_0 = coefficient_type(0), t_1 = coefficient_type(1);
+                s_0 = ValueType(1), s_1 = ValueType(0),
+                t_0 = ValueType(0), t_1 = ValueType(1);
             while(r_1 != 0){
-                coefficient_type q = r_0 / r_1, r_m = r_1, s_m = s_1, t_m = t_1;
+                ValueType q = r_0 / r_1, r_m = r_1, s_m = s_1, t_m = t_1;
                 if(q == 0){
                     s = 0;
                     t = 1 / g;
