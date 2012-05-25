@@ -517,6 +517,11 @@ namespace cpp_multi_precision{
             t = std::move(t_0);
             return std::move(result);
         }
+
+        template<class T, class U>
+        struct to_result{
+            typedef decltype(T() + U()) type;
+        };
     }
 }
 

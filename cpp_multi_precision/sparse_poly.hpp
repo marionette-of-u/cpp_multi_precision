@@ -6,6 +6,7 @@
 #include <map>
 #include <algorithm>
 #include <cmath>
+#include "storaged_container.hpp"
 #include "ns_aux.hpp"
 
 namespace cpp_multi_precision{
@@ -765,19 +766,23 @@ namespace cpp_multi_precision{
         }
 
         template<class MContainer, class VContainer>
-        static typename VContainer::value_type cra(const MContainer &m_container, const VContainer &v_container){
-            typedef typename MContainer::value_type m_type;
-            typedef typename VContainer::value_type v_type;
-            m_type m = 1;
-            v_type ret;
+        static typename aux::to_result<
+            typename VContainer::value_type,
+            typename VContainer::value_type::coefficient_type
+        >::type cra(const MContainer &m_container, const VContainer &v_container){
+            typedef typename VContainer::value_type m_type;
+            typedef typename VContainer::value_type::coefficient_type v_type;
+            typedef typename aux::to_result<v_type, m_type>::type ret_type;
+            v_type m = 1;
+            ret_type ret;
             for(typename MContainer::const_iterator iter = m_container.begin(), end = m_container.end(); iter != end; ++iter){
                 m *= *iter;
             }
             for(std::size_t i = 0, r = m_container.size(); i < r; ++i){
-                m_type
+                v_type
                     m_div_mi = m / m_container[i],
-                    s = cra_inner_eea(m_div_mi, m_container[i]);
-                ret += m_div_mi * ((v_container[i] * (s < 0 ? m_container[i] + s : s)) % m_container[i]);
+                    s = cra_inner_eea(m_div_mi, v_type(m_container[i]));
+                ret += m_div_mi * ((v_container[i] * (s < 0 ? m_container[i] + s : s) % m_container[i]));
             }
             return std::move(ret);
         }
@@ -934,13 +939,13 @@ namespace cpp_multi_precision{
 #define CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_SIGN template<class T, aux::sign T::*Sign>
         CPP_MULTI_PRECISION_AUX_HAS_MEM_FN(sign, CPP_MULTI_PRECISION_AUX_SIGNATURE_SPARSE_POLY_SIGN);
         template<class T>
-        static T abs_dispatch(const T x, typename boost::enable_if<has_sign<T>>::type* = nullptr){
+        static T abs_dispatch(T x, typename boost::enable_if<has_sign<T>>::type* = nullptr){
             x.sign = true;
             return std::move(x);
         }
 
         template<class T>
-        static T abs_dispatch(const T x, typename boost::disable_if<has_sign<T>>::type* = nullptr){
+        static T abs_dispatch(T x, typename boost::disable_if<has_sign<T>>::type* = nullptr){
             if(x >= 0){
                 return std::move(x);
             }else{
@@ -1047,7 +1052,7 @@ namespace cpp_multi_precision{
         ){
             r = a;
             q.container.clear();
-            if(a.ref_deg() < b.ref_deg()){ return q; }
+            if(a.deg() < b.ref_deg()){ return q; }
             const order_type &m(b.ref_deg());
             const coefficient_type &u(b.lc());
             for(typename container_type::reverse_iterator iter = r.container.rbegin(); ; ){
@@ -1693,66 +1698,80 @@ namespace cpp_multi_precision{
                 {
                     order_type e = vp_set[0].first.deg();
                     for(std::size_t i = 1, length = vp_set.size(); i < length; ++i){
-                        if(vp_set[i].first.deg() < e){ e = vp_set[i].first.deg(); }
+                        if(vp_set[i].first.ref_deg() < e){ e = vp_set[i].first.ref_deg(); }
                     }
                     set.clear();
                     vp_set.erase(
                         std::remove_if(
                             vp_set.begin(),
                             vp_set.end(),
-                            [&](const std::pair<sparse_poly, prime_list_type::value_type> &vp) -> bool{ return vp.second != e; }
-                        )
+                            [&](const std::pair<sparse_poly, prime_list_type::value_type> &vp) -> bool{
+                                return vp.first.ref_deg() != e;
+                            }
+                        ),
+                        vp_set.end()
                     );
                 }
-                set.clear();
                 set.resize(vp_set.size());
                 v_set.resize(vp_set.size());
                 for(std::size_t i = 0, length = vp_set.size(); i < length; ++i){
                     v_set[i] = vp_set[i].first;
                     set[i] = vp_set[i].second;
-                }
-                {
-                    prime_list_type::ext_prime_vec_type::iterator iter =
-                        std::find(set.begin(), set.end(), prime_list_type::value_type(set.size() - to_unsigned_int_dispatch(l)));
-                    if(iter != set.end()){ set.erase(iter); }
+                }   
+                std::size_t l_ = to_unsigned_int_dispatch(l), l_length = set.size() - l_;
+                if(set.size() >= l_){
+                    prime_list_type::ext_prime_vec_type set_l;
+                    set_l.reserve(l_length);
+                    for(std::size_t i = 0; i < l_length; ++i){
+                        set_l.push_back(set[l_length + i]);
+                    }
+                    set = std::move(set_l);
                 }
             }
-            
-
-            {
-                std::vector<coefficient_type> m;
-                std::vector<sparse_poly> v;
-                m.reserve(1), v.reserve(1);
-                m.push_back(set.back()), v.push_back(v_set.back() * b);
-                result = cra(m, v).pp();
-            }
-
-            //sparse_poly w;
 
             //{
-            //    sparse_poly bf = b * f, bg = b * g, f_star, g_star;
-            //    coefficient_type w_norm1;
-            //    std::vector<coefficient_type> m;
             //    std::vector<sparse_poly> v;
-            //    m.reserve(1), v.reserve(1);
-            //    std::size_t i = 0;
-            //    do{
-            //        m.push_back(set[set.size() - i - 1]);
-            //        v.push_back(v_set[v_set.size() - i - 1] * b);
-            //        w = cra(m, v);
-            //        w_norm1 = w.norm1();
-            //        v.clear();
-            //        v.push_back(bf);
-            //        f_star = cra(m, v);
-            //        v.clear();
-            //        v.push_back(bg);
-            //        g_star = cra(m, v);
-            //        m.clear();
-            //        v.clear();
-            //        ++i;
-            //    }while(f_star.norm1() * w_norm1 <= large_b && g_star.norm1() * w_norm1 <= large_b);
+            //    v.reserve(set.size());
+            //    for(std::size_t i = 0, length = set.size(); i < length; ++i){
+            //        v.push_back(v_set[v_set.size() - length + i] * b);
+            //    }
+            //    result = cra(set, v).pp();
             //}
-            //result = w.pp();
+
+            sparse_poly &w(result);
+            {
+                sparse_poly bf = b * f, bg = b * g, f_star, g_star;
+                coefficient_type w_norm1;
+                typedef storaged_container<1> container_group;
+                container_group::vector<coefficient_type> m;
+                container_group::vector<sparse_poly> v;
+                std::size_t i = 0;
+                do{
+                    m.push_back(set[set.size() - i - 1]);
+                    v.push_back(v_set[v_set.size() - i - 1] * b);
+                    std::cout
+                        << "<" << i << ">\n"
+                        << "m  : " << m.back() << "\n"
+                        << "vv : " << v_set[v_set.size() - i - 1] << "\n"
+                        << "v  : " << v.back() << "\n";
+                    w = cra(m, v);
+                    w_norm1 = w.norm1();
+                    v.clear();
+                    v.push_back(bf);
+                    f_star = cra(m, v);
+                    v.clear();
+                    v.push_back(bg);
+                    g_star = cra(m, v);
+                    m.clear();
+                    v.clear();
+                    ++i;
+                    std::cout
+                        << "w   : " << w << "\n"
+                        << "f^* : " << f_star << "\n"
+                        << "g^* : " << g_star << "\n\n";
+                }while(f_star.norm1() * w_norm1 > large_b || g_star.norm1() * w_norm1 > large_b);
+            }
+            result = w.pp();
 
             //for(std::size_t i = 0, length = v_set.size(); i < length; ++i){
             //    std::cout << set[i] << "\n";
@@ -1764,7 +1783,8 @@ namespace cpp_multi_precision{
             //for(std::size_t i = 0, length = v_set.size(); i < length; ++i){
             //    std::cout << v_set[i] << "\n";
             //}
-            //result = cra(set, v_set).pp();
+            //result = cra(set, v_set);
+            //result = result.pp();
 
             return result;
         }

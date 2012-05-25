@@ -177,6 +177,7 @@ namespace cpp_multi_precision{
         integer operator %(const integer &rhs) const{
             integer quo, rem;
             div(quo, rem, *this, rhs);
+            rem.sign = quo.sign;
             return std::move(rem);
         }
 
