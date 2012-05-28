@@ -437,8 +437,7 @@ namespace cpp_multi_precision{
         }
 
         static unsigned_integer &div(unsigned_integer &result, unsigned_integer &rem, const unsigned_integer &lhs, const unsigned_integer &rhs){
-            result.assign(lhs);
-            result.div_impl(rhs, rem);
+            div_impl(result, rem, lhs, rhs);
             return result;
         }
 
@@ -469,41 +468,20 @@ namespace cpp_multi_precision{
             (this->*normalize_container)();
         }
 
-        void div_impl(const unsigned_integer &v, unsigned_integer &r){
-            const radix_type half = static_cast<radix_type>(static_cast<radix2_type>(1) << (radix_log2 - 1));
-            if(*this == 0 || *this < v){
-                r.assign(*this);
-                assign(0);
-                return;
-            }
-            unsigned_integer v_prime(v);
-            container_type buffer;
-            radix_type leftmost = v_prime.container.back();
-            std::size_t shift_num = 0;
-            while(leftmost < half){
-                leftmost <<= 1;
-                ++shift_num;
-            }
-            v_prime <<= shift_num;
-            *this <<= shift_num;
-            std::size_t s = container.size() - v_prime.container.size();
-            r.div_copy_impl(*this, s, s + v_prime.container.size() - 1);
-            if(r < v_prime){
-                r.container.insert(r.container.begin(), container[--s]);
-            }
-            while(r >= v_prime){
-                buffer.push_back(r.div_n_digit(v_prime));
-                while(s > 0){
-                    r.container.insert(r.container.begin(), container[--s]);
-                    if(r >= v_prime){ break; }
-                    buffer.push_back(0);
+        static void div_impl(unsigned_integer &result, unsigned_integer &rem, const unsigned_integer &a, const unsigned_integer &b){
+            rem = a;
+            if(a.deg() < b.deg()){ return; }
+            radix_type u = b.lc();
+            std::size_t n = a.deg(), m = b.deg(), i = n - m + 1;
+            do{
+                --i;
+                if(rem.deg() == m + i){
+                    if(result.container.size() < i){ result.container.resize(i); }
+                    radix_type q = rem.lc() / u;
+                    result.container[i] = q;
+                    rem.sub_q_n(b, q, i);
                 }
-            }
-            container.clear();
-            for(std::size_t i = buffer.size(); i > 0; --i){
-                container.push_back(buffer[i - 1]);
-            }
-            r >>= shift_num;
+            }while(i != 0);
         }
 
         static unsigned_integer &div(unsigned_integer &result, const unsigned_integer &lhs, const unsigned_integer &rhs){

@@ -1747,7 +1747,7 @@ namespace cpp_multi_precision{
         static sparse_poly &primitive_gcd_impl(sparse_poly &result, const sparse_poly &f, const sparse_poly &g){
             result.container.clear();
             if(g.container.empty()){ return result; }
-            order_type n = f.deg();
+            const order_type &n(f.ref_deg());
             coefficient_type n_ = coefficient_type(n), large_a = f.infinity_norm();
             {
                 coefficient_type large_a_prime = g.infinity_norm();
@@ -1769,10 +1769,7 @@ namespace cpp_multi_precision{
                 std::remove_if(
                     set.begin(),
                     set.end(),
-                    [&](prime_list_type::value_type p) -> bool{
-                        if(p == 0){ return true; }
-                        return b % p == 0;
-                    }
+                    [&](prime_list_type::value_type p) -> bool{ return p == 0 || b % p == 0; }
                 ),
                 set.end()
             );
@@ -1801,28 +1798,23 @@ namespace cpp_multi_precision{
                         vp_set.end()
                     );
                 }
-                set.resize(vp_set.size());
-                v_set.resize(vp_set.size());
+                v_set.resize(vp_set.size()), set.resize(vp_set.size());
                 for(std::size_t i = 0, length = vp_set.size(); i < length; ++i){
-                    v_set[i] = vp_set[i].first;
-                    set[i] = vp_set[i].second;
+                    v_set[i] = vp_set[i].first, set[i] = vp_set[i].second;
                 }
-                std::size_t l_ = to_unsigned_int_dispatch(l), l_length = set.size() - l_;
-                if(set.size() >= l_){
-                    set.resize(l_);
-                    v_set.resize(l_);
-                }
+                std::size_t l_ = to_unsigned_int_dispatch(l);
+                if(set.size() >= l_){ set.resize(l_), v_set.resize(l_); }
             }
 
             {
-                std::vector<sparse_poly> w;
-				std::size_t i_length = 0;
+                std::size_t i_length = 0;
                 for(coefficient_type p = 1; p < large_a; ){ p *= set[i_length++]; }
-				{
+                std::vector<sparse_poly> w;
+                {
                     storaged_container<1>::vector<coefficient_type> m;
                     storaged_container<1>::vector<sparse_poly> v;
                     std::vector<typename container_type::iterator> w_iter;
-                    w.reserve(set.size());
+                    w.reserve(i_length);
                     for(std::size_t i = 0; i < i_length; ++i){
                         m.clear(), v.clear();
                         m.push_back(set[i]), v.push_back(v_set[i] * b);
