@@ -519,8 +519,23 @@ namespace cpp_multi_precision{
         }
 
         template<class T, class U>
-        struct to_result{
+        struct result_type{
             typedef decltype(T() + U()) type;
+        };
+
+        template<class T>
+        struct remove_reference{
+            typedef typename T::value_type type;
+        };
+
+        template<class T>
+        struct remove_reference<T*>{
+            typedef T type;
+        };
+
+        template<class T>
+        struct remove_reference<const T*>{
+            typedef T type;
         };
     }
 }

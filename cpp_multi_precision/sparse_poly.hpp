@@ -5,7 +5,9 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <iterator>
 #include <cmath>
+#include <boost/iterator_adaptors.hpp>
 #include "storaged_container.hpp"
 #include "ns_aux.hpp"
 
@@ -765,26 +767,47 @@ namespace cpp_multi_precision{
             return *this;
         }
 
-        template<class MContainer, class VContainer>
-        static typename aux::to_result<
-            typename VContainer::value_type,
-            typename VContainer::value_type::coefficient_type
-        >::type cra(const MContainer &m_container, const VContainer &v_container){
-            typedef typename VContainer::value_type m_type;
-            typedef typename VContainer::value_type::coefficient_type v_type;
-            typedef typename aux::to_result<v_type, m_type>::type ret_type;
-            v_type m = 1;
-            ret_type ret;
-            for(typename MContainer::const_iterator iter = m_container.begin(), end = m_container.end(); iter != end; ++iter){
-                m *= *iter;
+        template<class VIter, class MIter>
+        static typename aux::result_type<
+            typename aux::remove_reference<VIter>::type,
+            typename aux::remove_reference<MIter>::type
+        >::type &cra(
+            typename aux::result_type<
+                typename aux::remove_reference<VIter>::type,
+                typename aux::remove_reference<MIter>::type
+            >::type &result,
+            VIter v_first,
+            VIter v_end,
+            MIter m_first,
+            MIter m_end
+        ){
+            typedef typename aux::remove_reference<VIter>::type v_type;
+            typedef typename aux::remove_reference<MIter>::type m_type;
+            v_type prod_m = m_type(1);
+            for(MIter iter = m_first; iter != m_end; ++iter){
+                prod_m *= *iter;
             }
-            for(std::size_t i = 0, r = m_container.size(); i < r; ++i){
-                v_type
-                    m_div_mi = m / m_container[i],
-                    s = cra_inner_eea(m_div_mi, v_type(m_container[i]));
-                ret += m_div_mi * ((v_container[i] * (s < 0 ? m_container[i] + s : s) % m_container[i]));
+            VIter v_iter = v_first;
+            MIter m_iter = m_first;
+            for(; v_iter != v_end; ++v_iter, ++m_iter){
+                const m_type &m(*m_iter);
+                v_type m_div_mi = prod_m / m;
+                result += m_div_mi * (*v_iter * cra_inner_eea(m_div_mi, v_type(m)) % m);
             }
-            return std::move(ret);
+            return result;
+        }
+
+        template<class VIter, class MIter>
+        static typename aux::result_type<
+                typename aux::remove_reference<VIter>::type,
+                typename aux::remove_reference<MIter>::type
+        >::type cra(VIter v_first, VIter v_end, MIter m_first, MIter m_end){
+            typename aux::result_type<
+                typename aux::remove_reference<VIter>::type,
+                typename aux::remove_reference<MIter>::type
+            >::type r;
+            cra(r, v_first, v_end, m_first, m_end);
+            return std::move(r);
         }
 
         template<class Variable>
@@ -1655,6 +1678,72 @@ namespace cpp_multi_precision{
             return result;
         }
 
+        template<class ConcurrentOrthogonalWIterator>
+        class orthogonal_w_iterrator : public boost::iterator_adaptor<
+            orthogonal_w_iterrator<ConcurrentOrthogonalWIterator>,
+            orthogonal_w_iterrator<ConcurrentOrthogonalWIterator>*,
+            const coefficient_type,
+            boost::forward_traversal_tag
+        >{
+        public:
+            std::size_t i;
+            const ConcurrentOrthogonalWIterator *concurrent;
+
+            orthogonal_w_iterrator(const orthogonal_w_iterrator &other) :
+                i(other.i), concurrent(other.concurrent)
+            {}
+
+            orthogonal_w_iterrator(const ConcurrentOrthogonalWIterator *concurrent_) :
+                concurrent(concurrent_), i(0)
+            {}
+
+            void increment(){ ++i; }
+
+            const coefficient_type &dereference() const{
+                return concurrent->iterator_container[i]->second;
+            }
+
+            bool equal(const orthogonal_w_iterrator &x) const{
+                return x.i == i;
+            }
+
+            static orthogonal_w_iterrator end(std::size_t i){
+                orthogonal_w_iterrator r(nullptr);
+                r.i = i;
+                return r;
+            }
+        };
+
+        class concurrent_orthogonal_w_iterator : public boost::iterator_adaptor<
+            concurrent_orthogonal_w_iterator,
+            concurrent_orthogonal_w_iterator*,
+            orthogonal_w_iterrator<concurrent_orthogonal_w_iterator>,
+            boost::forward_traversal_tag
+        >{
+        public:
+            typedef std::vector<typename container_type::const_iterator> iterator_container_type;
+            typedef orthogonal_w_iterrator<concurrent_orthogonal_w_iterator> orthogonal_w_iterrator_type;
+            iterator_container_type &iterator_container;
+            mutable orthogonal_w_iterrator_type orthogonal_w_iterrator_cache;
+            concurrent_orthogonal_w_iterator(iterator_container_type &iterator_container_) :
+                iterator_container(iterator_container_), orthogonal_w_iterrator_cache(nullptr)
+            {}
+
+            void increment(){
+                for(
+                    typename iterator_container_type::iterator iter = iterator_container.begin(), end = iterator_container.end();
+                    iter != end;
+                    ++iter
+                ){ ++(*iter); }
+            }
+
+            orthogonal_w_iterrator_type &dereference() const{
+                orthogonal_w_iterrator_cache.i = 0;
+                orthogonal_w_iterrator_cache.concurrent = this;
+                return orthogonal_w_iterrator_cache;
+            };
+        };
+
         static sparse_poly &primitive_gcd_impl(sparse_poly &result, const sparse_poly &f, const sparse_poly &g){
             result.container.clear();
             if(g.container.empty()){ return result; }
@@ -1662,7 +1751,7 @@ namespace cpp_multi_precision{
             coefficient_type n_ = coefficient_type(n), large_a = f.infinity_norm();
             {
                 coefficient_type large_a_prime = g.infinity_norm();
-                if(large_a_prime > large_a){ large_a = large_a_prime; }
+                if(large_a_prime > large_a){ large_a = std::move(large_a_prime); }
             }
             coefficient_type
                 b = aux::gcd(f.lc(), g.lc()),
@@ -1717,75 +1806,51 @@ namespace cpp_multi_precision{
                 for(std::size_t i = 0, length = vp_set.size(); i < length; ++i){
                     v_set[i] = vp_set[i].first;
                     set[i] = vp_set[i].second;
-                }   
+                }
                 std::size_t l_ = to_unsigned_int_dispatch(l), l_length = set.size() - l_;
                 if(set.size() >= l_){
-                    prime_list_type::ext_prime_vec_type set_l;
-                    set_l.reserve(l_length);
-                    for(std::size_t i = 0; i < l_length; ++i){
-                        set_l.push_back(set[l_length + i]);
-                    }
-                    set = std::move(set_l);
+                    set.resize(l_);
+                    v_set.resize(l_);
                 }
             }
 
-            //{
-            //    std::vector<sparse_poly> v;
-            //    v.reserve(set.size());
-            //    for(std::size_t i = 0, length = set.size(); i < length; ++i){
-            //        v.push_back(v_set[v_set.size() - length + i] * b);
-            //    }
-            //    result = cra(set, v).pp();
-            //}
-
-            sparse_poly &w(result);
             {
-                sparse_poly bf = b * f, bg = b * g, f_star, g_star;
-                coefficient_type w_norm1;
-                typedef storaged_container<1> container_group;
-                container_group::vector<coefficient_type> m;
-                container_group::vector<sparse_poly> v;
-                std::size_t i = 0;
-                do{
-                    m.push_back(set[set.size() - i - 1]);
-                    v.push_back(v_set[v_set.size() - i - 1] * b);
-                    std::cout
-                        << "<" << i << ">\n"
-                        << "m  : " << m.back() << "\n"
-                        << "vv : " << v_set[v_set.size() - i - 1] << "\n"
-                        << "v  : " << v.back() << "\n";
-                    w = cra(m, v);
-                    w_norm1 = w.norm1();
-                    v.clear();
-                    v.push_back(bf);
-                    f_star = cra(m, v);
-                    v.clear();
-                    v.push_back(bg);
-                    g_star = cra(m, v);
-                    m.clear();
-                    v.clear();
-                    ++i;
-                    std::cout
-                        << "w   : " << w << "\n"
-                        << "f^* : " << f_star << "\n"
-                        << "g^* : " << g_star << "\n\n";
-                }while(f_star.norm1() * w_norm1 > large_b || g_star.norm1() * w_norm1 > large_b);
+                std::vector<sparse_poly> w;
+				std::size_t i_length = 0;
+                for(coefficient_type p = 1; p < large_a; ){ p *= set[i_length++]; }
+				{
+                    storaged_container<1>::vector<coefficient_type> m;
+                    storaged_container<1>::vector<sparse_poly> v;
+                    std::vector<typename container_type::iterator> w_iter;
+                    w.reserve(set.size());
+                    for(std::size_t i = 0; i < i_length; ++i){
+                        m.clear(), v.clear();
+                        m.push_back(set[i]), v.push_back(v_set[i] * b);
+                        w.push_back(cra(v.begin(), v.end(), m.begin(), m.end()));
+                    }
+                }
+                std::vector<typename container_type::const_iterator> orthogonal_w_iterator_vec;
+                orthogonal_w_iterator_vec.reserve(set.size());
+                for(std::size_t i = 0 ,length = w.size(); i < length; ++i){
+                    orthogonal_w_iterator_vec.push_back(w[i].container.begin());
+                }
+                concurrent_orthogonal_w_iterator d(orthogonal_w_iterator_vec);
+                typename container_type::const_iterator
+                    w_element_iter = w.front().container.begin(),
+                    w_element_end = w.front().container.end();
+                for(; w_element_iter != w_element_end; ++w_element_iter, ++d){
+                    sparse_poly r =
+                        cra(
+                            *d,
+                            orthogonal_w_iterrator<concurrent_orthogonal_w_iterator>::end(i_length),
+                            set.begin(),
+                            set.begin() + i_length
+                        );
+                    r.radix_shift(w_element_iter->first);
+                    result += r;
+                }
             }
-            result = w.pp();
-
-            //for(std::size_t i = 0, length = v_set.size(); i < length; ++i){
-            //    std::cout << set[i] << "\n";
-            //}
-            //std::cout << "\n";
-            //for(std::size_t i = 0, length = v_set.size(); i < length; ++i){
-            //    v_set[i] *= b;
-            //}
-            //for(std::size_t i = 0, length = v_set.size(); i < length; ++i){
-            //    std::cout << v_set[i] << "\n";
-            //}
-            //result = cra(set, v_set);
-            //result = result.pp();
-
+            result = result.pp();
             return result;
         }
 

@@ -96,12 +96,71 @@ void test_sparse_poly(){
     std::cout << "bezout coefficient = " << zs << " : " << zt << "\n";
     std::cout << "modular gcd (linear combination) = " << (za * zs + zb * zt).mod_coefficient(7) << "\n";
 
+//    // cra : elements num == 2
+//    {
+//        std::vector<z_field_sparse_poly> vec_m;
+//        std::vector<z_field_sparse_poly> vec_v;
+//        z_field_sparse_poly a, b;
+//
+//#define PUSH_M(n) a [0](n); vec_m.push_back(a); a = 0;
+//#define PUSH_V(n) b [0](n); vec_v.push_back(b); b = 0;
+//        //PUSH_M(572);
+//        //PUSH_M(558);
+//        //PUSH_M(540);
+//        //PUSH_M(536);
+//        //PUSH_M(530);
+//        //PUSH_M(510);
+//        //PUSH_M(506);
+//        //PUSH_M(498);
+//        //PUSH_M(492);
+//        //PUSH_M(488);
+//        //PUSH_M(480);
+//        //PUSH_M(476);
+//        //PUSH_M(462);
+//        //PUSH_M(456);
+//        //PUSH_M(452);
+//        //PUSH_M(438);
+//        //PUSH_M(426);
+//        //PUSH_M(422);
+//        PUSH_M(420);
+//        PUSH_M(390);
+//
+//        //PUSH_V(7607);
+//        //PUSH_V(7621);
+//        //PUSH_V(7639);
+//        //PUSH_V(7643);
+//        //PUSH_V(7649);
+//        //PUSH_V(7669);
+//        //PUSH_V(7673);
+//        //PUSH_V(7681);
+//        //PUSH_V(7687);
+//        //PUSH_V(7691);
+//        //PUSH_V(7699);
+//        //PUSH_V(7703);
+//        //PUSH_V(7717);
+//        //PUSH_V(7723);
+//        //PUSH_V(7727);
+//        //PUSH_V(7741);
+//        //PUSH_V(7753);
+//        //PUSH_V(7757);
+//        PUSH_V(7759);
+//        PUSH_V(7789);
+//
+//        std::cout << z_field_sparse_poly::cra(vec_m.begin(), vec_m.end(), vec_v.begin(), vec_v.end()) << "\n";
+//    }
+
     // 壊れてます
     za = 0, zb = 0;
-    //za [5](3) [4](2);
-    //zb [2](3) [1](2);
+    za [5](5) [4](2);
+    zb [2](2);
+    std::cout << z_field_sparse_poly::primitive_gcd(za, zb) << "\n";
+    za = 0, zb = 0;
     za [10](8161) [9](8167) [8](8171) [7](8179);
-    zb [4](8161) [3](8167) [2](8171) [1](8179);
+    zb [6](8161) [5](8167) [4](8171) [3](8179);
+    std::cout << z_field_sparse_poly::primitive_gcd(za, zb) << "\n";
+    za = 0, zb = 0;
+    za [11](8161) [9](8167) [8](8171) [7](8179);
+    zb [10](8161) [5](8167) [4](8171) [3](8179);
     std::cout << z_field_sparse_poly::primitive_gcd(za, zb) << "\n";
 
     sparse_poly poly_a, poly_b, poly_c, poly_r, poly_cl, poly_cr;
