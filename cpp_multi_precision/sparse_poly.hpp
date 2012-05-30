@@ -116,6 +116,31 @@ namespace cpp_multi_precision{
                     return iter.first;
                 }
             }
+
+            int compare_constant(const container_type &rhs_container) const{
+                bool l_empty = base_type::empty(), r_empty = rhs_container.base_type::empty();
+                if(l_empty && r_empty){
+                    return 0;
+                }else if(!l_empty && r_empty){
+                    const coefficient_type &a(base_type::begin()->second);
+                    return a < 0 ? -1 : 1;
+                }else if(l_empty && !r_empty){
+                    const coefficient_type &a(rhs_container.base_type::begin()->second);
+                    return a < 0 ? 1 : -1;
+                }
+                int r = 0;
+                const coefficient_type &lhs_coe(base_type::begin()->second), &rhs_coe(rhs_container.base_type::begin()->second);
+                if(lhs_coe < rhs_coe){
+                    r = -1;
+                }else if(rhs_coe < lhs_coe){
+                    r = 1;
+                }
+                return r;
+            }
+
+            bool is_constant() const{
+                return base_type::empty() || (base_type::size() == 1 && base_type::find(order_type(0)) != base_type::end());
+            }
         };
 
         typedef typename container_type::key_type order_type;
@@ -256,11 +281,11 @@ namespace cpp_multi_precision{
             return std::move(result);
         }
 
-        sparse_poly operator +(const coefficient_type &rhs){
-            sparse_poly result(*this);
-            result += rhs;
-            return std::move(result);
-        }
+        //sparse_poly operator +(const coefficient_type &rhs){
+        //    sparse_poly result(*this);
+        //    result += rhs;
+        //    return std::move(result);
+        //}
 
         sparse_poly &operator -=(const sparse_poly &rhs){
             sub_iterator(rhs.container.begin(), rhs.container.end());
@@ -288,11 +313,11 @@ namespace cpp_multi_precision{
             return std::move(result);
         }
 
-        sparse_poly operator -(const coefficient_type &rhs) const{
-            sparse_poly result(*this);
-            result -= rhs;
-            return std::move(result);
-        }
+        //sparse_poly operator -(const coefficient_type &rhs) const{
+        //    sparse_poly result(*this);
+        //    result -= rhs;
+        //    return std::move(result);
+        //}
 
         sparse_poly operator *(const sparse_poly &rhs) const{
             sparse_poly r;
@@ -300,11 +325,11 @@ namespace cpp_multi_precision{
             return std::move(r);
         }
 
-        sparse_poly operator *(const coefficient_type &rhs) const{
-            sparse_poly r(*this);
-            r *= rhs;
-            return std::move(r);
-        }
+        //sparse_poly operator *(const coefficient_type &rhs) const{
+        //    sparse_poly r(*this);
+        //    r *= rhs;
+        //    return std::move(r);
+        //}
 
         sparse_poly &operator *=(const sparse_poly &rhs){
             assign(*this * rhs);
@@ -335,11 +360,11 @@ namespace cpp_multi_precision{
             return std::move(r);
         }
 
-        sparse_poly operator /(const coefficient_type &rhs) const{
-            sparse_poly r(*this);
-            r /= rhs;
-            return std::move(r);
-        }
+        //sparse_poly operator /(const coefficient_type &rhs) const{
+        //    sparse_poly r(*this);
+        //    r /= rhs;
+        //    return std::move(r);
+        //}
 
         sparse_poly &operator /=(const sparse_poly &rhs){
             assign(*this / rhs);
@@ -367,37 +392,37 @@ namespace cpp_multi_precision{
             return std::move(rem);
         }
 
-        sparse_poly operator %(const coefficient_type &rhs) const{
-            sparse_poly r, rem;
-            monic_div(r, rem, *this, sparse_poly(rhs));
-            return std::move(rem);
-        }
+        //sparse_poly operator %(const coefficient_type &rhs) const{
+        //    sparse_poly r, rem;
+        //    monic_div(r, rem, *this, sparse_poly(rhs));
+        //    return std::move(rem);
+        //}
 
         sparse_poly &operator %=(const sparse_poly &rhs){
             assign(*this % rhs);
             return *this;
         }
 
-        sparse_poly &operator %=(const coefficient_type &rhs){
-            assign(*this % rhs);
-            return *this;
-        }
+        //sparse_poly &operator %=(const coefficient_type &rhs){
+        //    assign(*this % rhs);
+        //    return *this;
+        //}
 
         bool operator <(const sparse_poly &rhs) const{
             return base_less_eq(false, rhs.container);
         }
 
-        bool operator <(const coefficient_type &rhs) const{
-            return base_less_eq(false, sparse_poly(rhs).container);
-        }
+        //bool operator <(const coefficient_type &rhs) const{
+        //    return base_less_eq(false, sparse_poly(rhs).container);
+        //}
 
         bool operator >(const sparse_poly &rhs) const{
             return rhs.operator <(*this);
         }
 
-        bool operator >(const coefficient_type &rhs) const{
-            return sparse_poly(rhs).operator <(*this);
-        }
+        //bool operator >(const coefficient_type &rhs) const{
+        //    return sparse_poly(rhs).operator <(*this);
+        //}
 
         bool operator <=(const sparse_poly &rhs) const{
             return base_less_eq(true, rhs.container);
@@ -778,21 +803,32 @@ namespace cpp_multi_precision{
             >::type &result,
             VIter v_first,
             VIter v_end,
-            MIter m_first,
-            MIter m_end
+            MIter m_first
         ){
             typedef typename aux::remove_reference<VIter>::type v_type;
             typedef typename aux::remove_reference<MIter>::type m_type;
+            result.container.clear();
             v_type prod_m = m_type(1);
-            for(MIter iter = m_first; iter != m_end; ++iter){
-                prod_m *= *iter;
+            {
+                MIter m_iter = m_first;
+                for(VIter v_iter = v_first; v_iter != v_end; ++v_iter, ++m_iter){
+                    prod_m *= *m_iter;
+                }
             }
             VIter v_iter = v_first;
             MIter m_iter = m_first;
             for(; v_iter != v_end; ++v_iter, ++m_iter){
                 const m_type &m(*m_iter);
                 v_type m_div_mi = prod_m / m;
-                result += m_div_mi * (*v_iter * cra_inner_eea(m_div_mi, v_type(m)) % m);
+                
+                // !!
+                v_type s = cra_inner_eea(m_div_mi, v_type(m));
+                std::cout << "ExtendedGCD[" << m_div_mi << ", " << m << "] = " << s << "\n";
+                v_type vsm = (*v_iter * s) % m;
+                std::cout << "Mod[" << *v_iter * s << ", " << m << "] = " << vsm << "\n";
+                result += m_div_mi * vsm;
+
+                //result += m_div_mi * ((*v_iter * cra_inner_eea(m_div_mi, v_type(m))) % m);
             }
             return result;
         }
@@ -801,12 +837,12 @@ namespace cpp_multi_precision{
         static typename aux::result_type<
                 typename aux::remove_reference<VIter>::type,
                 typename aux::remove_reference<MIter>::type
-        >::type cra(VIter v_first, VIter v_end, MIter m_first, MIter m_end){
+        >::type cra(VIter v_first, VIter v_end, MIter m_first){
             typename aux::result_type<
                 typename aux::remove_reference<VIter>::type,
                 typename aux::remove_reference<MIter>::type
             >::type r;
-            cra(r, v_first, v_end, m_first, m_end);
+            cra(r, v_first, v_end, m_first);
             return std::move(r);
         }
 
@@ -1042,9 +1078,9 @@ namespace cpp_multi_precision{
         template<class T>
         static void set_sign(T &x, bool b, typename boost::disable_if<has_sign<T>>::type* = 0){
             if(b){
-                if(x < 0){ x = -x; }
+                if(x < T(0)){ x = -x; }
             }else{
-                if(x > 0){ x = -x; }
+                if(x > T(0)){ x = -x; }
             }
         }
 
@@ -1063,8 +1099,32 @@ namespace cpp_multi_precision{
             void operator ()(const T&) const{}
         };
 
-        template<class Modulo, class CoefficientModulo, class Divisor>
+        template<bool Rem, class Modulo, class CoefficientModulo, class Divisor>
         static sparse_poly &square_div(
+            sparse_poly &q,
+            sparse_poly &r,
+            const sparse_poly &a,
+            const sparse_poly &b,
+            const Modulo &modulo,
+            const CoefficientModulo &coe_modulo,
+            const Divisor &div
+        ){
+            square_div_impl<Rem>(q, r, a, b, modulo, coe_modulo, div);
+            if((a.container.size() <= 1 && a.affirmation_plus()) != (b.container.size() <= 1 && b.affirmation_plus())){
+                if(Rem){
+                    if(a.affirmation_plus()){
+                        r = a - abs_dispatch(q.constant_part()) * abs_dispatch(b.constant_part());
+                    }else{
+                        r = abs_dispatch(a.constant_part()) - abs_dispatch(q.constant_part()) * b;
+                    }
+                }
+            }
+            if(Rem){ set_sign(r, get_sign_dispatch(b)); }
+            return q;
+        }
+
+        template<bool Rem, class Modulo, class CoefficientModulo, class Divisor>
+        static sparse_poly &square_div_impl(
             sparse_poly &q,
             sparse_poly &r,
             const sparse_poly &a,
@@ -1075,7 +1135,7 @@ namespace cpp_multi_precision{
         ){
             r = a;
             q.container.clear();
-            if(a.deg() < b.ref_deg()){ return q; }
+            if(a.container.empty() || a.deg() < b.deg()){ return q; }
             const order_type &m(b.ref_deg());
             const coefficient_type &u(b.lc());
             for(typename container_type::reverse_iterator iter = r.container.rbegin(); ; ){
@@ -1099,7 +1159,33 @@ namespace cpp_multi_precision{
                     iter = r.container.rbegin();
                 }
             }
+            if(Rem && !q.affirmation_plus()){
+                r = minus_rem(a, b, q);
+                modulo(r);
+            }
             return q;
+        }
+
+        bool affirmation_plus() const{
+            typename container_type::const_iterator iter = container.find(order_type(0));
+            return iter == container.end() || iter->second >= coefficient_type(0);
+        }
+
+        coefficient_type constant_part() const{
+            typename container_type::const_iterator iter = container.find(order_type(0));
+            if(iter == container.end()){
+                return coefficient_type(0);
+            }else{
+                return iter->second;
+            }
+        }
+
+        static sparse_poly plus_rem(const sparse_poly &lhs, const sparse_poly &rhs, const sparse_poly &quo){
+            return lhs - quo * rhs;
+        }
+
+        static sparse_poly minus_rem(const sparse_poly &lhs, const sparse_poly &rhs, const sparse_poly &quo){
+            return plus_rem(lhs, rhs, quo);
         }
 
         static sparse_poly &monic_div(sparse_poly &result, sparse_poly &rem, const sparse_poly &lhs, const sparse_poly &rhs){
@@ -1118,6 +1204,16 @@ namespace cpp_multi_precision{
         }
 
         bool base_less_eq(bool final, const container_type &rhs_container) const{
+            if(container.is_constant() && rhs_container.is_constant()){
+                switch(container.compare_constant(rhs_container)){
+                case 0:
+                    return final;
+                case -1:
+                    return true;
+                case 1:
+                    return false;
+                }
+            }
             typename container_type::const_reverse_iterator
                 lhs_iter = container.rbegin(),
                 lhs_end = container.rend(),
@@ -1149,6 +1245,16 @@ namespace cpp_multi_precision{
         }
 
         bool base_modular_less_eq(bool final, const container_type &rhs_container, const coefficient_type &p) const{
+            if(container.is_constant() && rhs_container.is_constant()){
+                switch(container.compare_constant(rhs_container)){
+                case 0:
+                    return final;
+                case -1:
+                    return true;
+                case 1:
+                    return false;
+                }
+            }
             typename container_type::const_reverse_iterator
                 lhs_iter = container.rbegin(),
                 lhs_end = container.rend(),
@@ -1179,6 +1285,13 @@ namespace cpp_multi_precision{
                 if(lhs_iter != lhs_end && rhs_iter == rhs_end){ return true; }
             }
             return final;
+        }
+
+        void sign_reverse(){
+            coefficient_type a = -1;
+            for(typename container_type::iterator iter = container.begin(), end = container.end(); iter != end; ++iter){
+                iter->second *= a;
+            }
         }
 
         static coefficient_type &modular_reduce_coefficient(
@@ -1330,7 +1443,7 @@ namespace cpp_multi_precision{
         template<bool Rem>
         static sparse_poly &monic_div_impl(sparse_poly &result, sparse_poly &rem, const sparse_poly &lhs, const sparse_poly &rhs){
             if(!rhs.is_monic()){
-                return square_div(result, rem, lhs, rhs, modulo_default(), modulo_default(), divisor_default());
+                return square_div<Rem>(result, rem, lhs, rhs, modulo_default(), modulo_default(), divisor_default());
             }
             result.container.clear();
             if(rhs.ref_deg() > lhs.ref_deg()){
@@ -1351,7 +1464,13 @@ namespace cpp_multi_precision{
             }
             result.container.erase(result.container.upper_bound(m), result.container.end());
             result.rev(m);
-            if(Rem){ rem = lhs - rhs * result; }
+            if(Rem){
+                if(result.affirmation_plus()){
+                    rem = plus_rem(lhs, rhs, result);
+                }else{
+                    rem = minus_rem(lhs, rhs, result);
+                }
+            }
             return result;
         }
 
@@ -1545,8 +1664,8 @@ namespace cpp_multi_precision{
             sparse_poly
                 rho_0 = f.lc(), rho_1 = g.lc(),
                 r_0, r_1,
-                s_0 = 1 / rho_0, s_1 = coefficient_type(0),
-                t_0 = coefficient_type(0), t_1 = 1 / rho_1;
+                s_0 = coefficient_type(1) / rho_0, s_1 = coefficient_type(0),
+                t_0 = coefficient_type(0), t_1 = coefficient_type(1) / rho_1;
             normal(r_0, f), normal(r_1, g);
             while(!r_1.container.empty()){
                 sparse_poly q = r_0 / r_1, r_m = r_1, s_m = s_1, t_m = t_1, rho_m = rho_1;
@@ -1585,17 +1704,13 @@ namespace cpp_multi_precision{
                 sparse_poly r_m = r_1;
                 {
                     sparse_poly dummy_rem;
-                    square_div(
+                    square_div<false>(
                         q,
                         dummy_rem,
                         r_0,
                         r_1,
-                        [&](sparse_poly &r){
-                            r.mod_coefficient(p);
-                        },
-                        [&](coefficient_type &r){
-                            r %= p;
-                        },
+                        [&](sparse_poly &r){ r.mod_coefficient(p); },
+                        [&](coefficient_type &r){ r %= p; },
                         [&](const coefficient_type &x, const coefficient_type &y) -> coefficient_type{
                             return x * coefficient_inverse(y, p) % p;
                         }
@@ -1643,7 +1758,7 @@ namespace cpp_multi_precision{
                 sparse_poly r_m = r_1, s_m = s_1, t_m = t_1;
                 {
                     sparse_poly dummy_result, dummy_rem;
-                    square_div(
+                    square_div<false>(
                         dummy_result,
                         dummy_rem,
                         r_0,
@@ -1818,7 +1933,7 @@ namespace cpp_multi_precision{
                     for(std::size_t i = 0; i < i_length; ++i){
                         m.clear(), v.clear();
                         m.push_back(set[i]), v.push_back(v_set[i] * b);
-                        w.push_back(cra(v.begin(), v.end(), m.begin(), m.end()));
+                        w.push_back(cra(v.begin(), v.end(), m.begin()));
                     }
                 }
                 std::vector<typename container_type::const_iterator> orthogonal_w_iterator_vec;
@@ -1835,8 +1950,7 @@ namespace cpp_multi_precision{
                         cra(
                             *d,
                             orthogonal_w_iterrator<concurrent_orthogonal_w_iterator>::end(i_length),
-                            set.begin(),
-                            set.begin() + i_length
+                            set.begin()
                         );
                     r.radix_shift(w_element_iter->first);
                     result += r;

@@ -469,19 +469,41 @@ namespace cpp_multi_precision{
         }
 
         static void div_impl(unsigned_integer &result, unsigned_integer &rem, const unsigned_integer &a, const unsigned_integer &b){
-            rem = a;
-            if(a.deg() < b.deg()){ return; }
-            radix_type u = b.lc();
-            std::size_t n = a.deg(), m = b.deg(), i = n - m + 1;
-            do{
-                --i;
-                if(rem.deg() == m + i){
-                    if(result.container.size() < i){ result.container.resize(i); }
-                    radix_type q = rem.lc() / u;
-                    result.container[i] = q;
-                    rem.sub_q_n(b, q, i);
+            const radix_type half = static_cast<radix_type>(static_cast<radix2_type>(1) << (radix_log2 - 1));
+            if(a == 0 || a < b){
+                rem.assign(a);
+                result.assign(0);
+                return;
+            }
+            result = a;
+            unsigned_integer v_prime(b);
+            container_type buffer;
+            radix_type leftmost = v_prime.container.back();
+            std::size_t shift_num = 0;
+            while(leftmost < half){
+                leftmost <<= 1;
+                ++shift_num;
+            }
+            v_prime <<= shift_num;
+            result <<= shift_num;
+            std::size_t s = result.container.size() - v_prime.container.size();
+            rem.div_copy_impl(result, s, s + v_prime.container.size() - 1);
+            if(rem < v_prime){
+                rem.container.insert(rem.container.begin(), result.container[--s]);
+            }
+            while(rem >= v_prime){
+                buffer.push_back(rem.div_n_digit(v_prime));
+                while(s > 0){
+                    rem.container.insert(rem.container.begin(), result.container[--s]);
+                    if(rem >= v_prime){ break; }
+                    buffer.push_back(0);
                 }
-            }while(i != 0);
+            }
+            result.container.clear();
+            for(std::size_t i = buffer.size(); i > 0; --i){
+                result.container.push_back(buffer[i - 1]);
+            }
+            rem >>= shift_num;
         }
 
         static unsigned_integer &div(unsigned_integer &result, const unsigned_integer &lhs, const unsigned_integer &rhs){

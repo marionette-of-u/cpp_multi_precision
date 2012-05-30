@@ -68,6 +68,16 @@ namespace cpp_multi_precision{
             sign = true;
         }
 
+        integer abs() const{
+            integer r(*this);
+            r.sign = true;
+            return std::move(r);
+        }
+
+        static integer abs(const integer &x){
+            return x.abs();
+        }
+
         void read(const char *str){
             read_impl<const char*, char>(str, '0', '9', '+', '-', 0);
         }
@@ -177,7 +187,6 @@ namespace cpp_multi_precision{
         integer operator %(const integer &rhs) const{
             integer quo, rem;
             div(quo, rem, *this, rhs);
-            rem.sign = quo.sign;
             return std::move(rem);
         }
 
@@ -570,7 +579,7 @@ namespace cpp_multi_precision{
             }else{
                 result.sign = lhs.sign == rhs.sign;
             }
-            if(static_cast<unsigned_integer_type&>(rem) == 0){ rem.sign = true; }
+            rem.sign = rhs.sign;
             return result;
         }
 
@@ -665,9 +674,25 @@ namespace cpp_multi_precision{
         }
 
         template<bool Rem>
+        static integer &square_div(integer &result, integer &rem, const integer &lhs, const integer &rhs){
+            unsigned_integer_type::div(result, rem, lhs, rhs);
+            if(lhs.sign != rhs.sign){
+                static_cast<unsigned_integer_type&>(result) += 1;
+                if(Rem){
+                    if(lhs.sign){
+                        rem = lhs - result.abs() * rhs.abs();
+                    }else{
+                        rem = lhs.abs() - result.abs() * rhs;
+                    }
+                }
+            }
+            return result;
+        }
+
+        template<bool Rem>
         static integer &monic_div_impl(integer &result, integer &rem, const integer &lhs, const integer &rhs){
             if(!rhs.is_monic()){
-                unsigned_integer_type::div(result, rem, lhs, rhs);
+                square_div<Rem>(result, rem, lhs, rhs);
                 return result;
             }
             result = 0;
