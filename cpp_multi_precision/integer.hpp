@@ -678,13 +678,15 @@ namespace cpp_multi_precision{
             unsigned_integer_type::div(result, rem, lhs, rhs);
             if(lhs.sign != rhs.sign){
                 static_cast<unsigned_integer_type&>(result) += 1;
-                if(Rem){
-                    if(lhs.sign){
-                        rem = lhs - result.abs() * rhs.abs();
-                    }else{
-                        rem = lhs.abs() - result.abs() * rhs;
-                    }
-                }
+
+                // !!
+                //if(Rem){
+                //    if(lhs.sign){
+                //        rem = lhs - result.abs() * rhs.abs();
+                //    }else{
+                //        rem = lhs.abs() - result.abs() * rhs;
+                //    }
+                //}
             }
             return result;
         }

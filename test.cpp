@@ -85,6 +85,15 @@ void test_sparse_poly(){
     typedef cpp_multi_precision::sparse_poly<integer, rational> sparse_poly;
     typedef cpp_multi_precision::sparse_poly<integer, integer> z_field_sparse_poly;
 
+    //std::cout
+    //    << integer(-160056) % integer(7723) << "\n"
+    //    << integer(-306456) % integer(7727) << "\n"
+    //    << integer(-669264) % integer(7741) << "\n"
+    //    << integer(239838) % integer(7753) << "\n"
+    //    << integer(-2110) % integer(7757) << "\n"
+    //    << integer(686700) % integer(7759) << "\n"
+    //    << integer(-130650) % integer(7789) << "\n";
+
     std::cout << "start test_sparse_poly\n";
 
     z_field_sparse_poly za, zb, zs, zt;
@@ -105,19 +114,19 @@ void test_sparse_poly(){
 
 #define PUSH_V(n) b [0](n); vec_v.push_back(b); b = 0;
 #define PUSH_M(n) a = n; vec_m.push_back(a); a = 0;
-        //PUSH_V(572);
-        //PUSH_V(558);
-        //PUSH_V(540);
-        //PUSH_V(536);
-        //PUSH_V(530);
-        //PUSH_V(510);
-        //PUSH_V(506);
-        //PUSH_V(498);
-        //PUSH_V(492);
-        //PUSH_V(488);
-        //PUSH_V(480);
-        //PUSH_V(476);
-        //PUSH_V(462);
+        PUSH_V(572);
+        PUSH_V(558);
+        PUSH_V(540);
+        PUSH_V(536);
+        PUSH_V(530);
+        PUSH_V(510);
+        PUSH_V(506);
+        PUSH_V(498);
+        PUSH_V(492);
+        PUSH_V(488);
+        PUSH_V(480);
+        PUSH_V(476);
+        PUSH_V(462);
         PUSH_V(456);
         PUSH_V(452);
         PUSH_V(438);
@@ -126,19 +135,19 @@ void test_sparse_poly(){
         PUSH_V(420);
         PUSH_V(390);
 
-        //PUSH_M(7607);
-        //PUSH_M(7621);
-        //PUSH_M(7639);
-        //PUSH_M(7643);
-        //PUSH_M(7649);
-        //PUSH_M(7669);
-        //PUSH_M(7673);
-        //PUSH_M(7681);
-        //PUSH_M(7687);
-        //PUSH_M(7691);
-        //PUSH_M(7699);
-        //PUSH_M(7703);
-        //PUSH_M(7717);
+        PUSH_M(7607);
+        PUSH_M(7621);
+        PUSH_M(7639);
+        PUSH_M(7643);
+        PUSH_M(7649);
+        PUSH_M(7669);
+        PUSH_M(7673);
+        PUSH_M(7681);
+        PUSH_M(7687);
+        PUSH_M(7691);
+        PUSH_M(7699);
+        PUSH_M(7703);
+        PUSH_M(7717);
         PUSH_M(7723);
         PUSH_M(7727);
         PUSH_M(7741);
