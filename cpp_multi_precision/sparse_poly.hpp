@@ -463,6 +463,23 @@ namespace cpp_multi_precision{
             return std::move(r);
         }
 
+        static sparse_poly &gcd_coefficient(sparse_poly &r, const sparse_poly &f, const coefficient_type &p){
+            r = f;
+            for(typename container_type::iterator iter = r.container.begin(), end = r.container.end(); iter != end; ++iter){
+                coefficient_type &coe(iter->second);
+                coefficient_type r;
+                gcd_dispatch(r, coe, p);
+                coe = std::move(r);
+            }
+            return r;
+        }
+
+        sparse_poly gcd_coefficient(const coefficient_type &p) const{
+            sparse_poly r;
+            gcd_coefficient(r, *this, p);
+            return std::move(r);
+        }
+
         static sparse_poly &modular_gcd(
             sparse_poly &result,
             const sparse_poly &f,
@@ -736,37 +753,32 @@ namespace cpp_multi_precision{
             std::move(r);
         }
 
-        sparse_poly &mod_coefficient(const coefficient_type &p){
-            for(typename container_type::iterator iter = container.begin(); iter != container.end(); ){
+        static sparse_poly &mod_coefficient(sparse_poly &r, const sparse_poly &f, const coefficient_type &p){
+            r = f;
+            for(typename container_type::iterator iter = r.container.begin(); iter != r.container.end(); ){
                 coefficient_type &coe(iter->second);
                 coe = modular_reduce_coefficient(coe, p);
-                if(coe == 0){
-                    iter = container.erase(iter++);
-                }else{
-                    ++iter;
-                }
+                if(coe == 0){ r.container.erase(iter++); }else{ ++iter; }
             }
-            return *this;
+            return r;
+        }
+
+        sparse_poly mod_coefficient(const coefficient_type &p) const{
+            sparse_poly r;
+            mod_coefficient(r, *this, p);
+            return std::move(r);
         }
 
         template<class VIter, class MIter>
-        static typename aux::result_type<
-            typename aux::remove_reference<VIter>::type,
-            typename aux::remove_reference<MIter>::type
-        >::type &cra(
-            typename aux::result_type<
-                typename aux::remove_reference<VIter>::type,
-                typename aux::remove_reference<MIter>::type
-            >::type &result,
+        static sparse_poly &cra(
+            sparse_poly &result,
             VIter v_first,
             VIter v_end,
             MIter m_first
         ){
-            typedef typename aux::remove_reference<VIter>::type v_type;
-            typedef typename aux::remove_reference<MIter>::type m_type;
             result.container.clear();
-            v_type m_div_mi;
-            m_type prod_m = m_type(1);
+            sparse_poly m_div_mi;
+            coefficient_type prod_m = 1;
             {
                 MIter m_iter = m_first;
                 for(VIter v_iter = v_first; v_iter != v_end; ++v_iter, ++m_iter){
@@ -776,7 +788,7 @@ namespace cpp_multi_precision{
             VIter v_iter = v_first;
             MIter m_iter = m_first;
             for(; v_iter != v_end; ++v_iter, ++m_iter){
-                const m_type &m(*m_iter);
+                const coefficient_type &m(*m_iter);
                 m_div_mi = prod_m / m;
                 result = (result + *v_iter * m_div_mi * m_div_mi.modular_inverse(m)) % prod_m;
             }
@@ -784,14 +796,8 @@ namespace cpp_multi_precision{
         }
 
         template<class VIter, class MIter>
-        static typename aux::result_type<
-                typename aux::remove_reference<VIter>::type,
-                typename aux::remove_reference<MIter>::type
-        >::type cra(VIter v_first, VIter v_end, MIter m_first){
-            typename aux::result_type<
-                typename aux::remove_reference<VIter>::type,
-                typename aux::remove_reference<MIter>::type
-            >::type r;
+        static sparse_poly cra(VIter v_first, VIter v_end, MIter m_first){
+            sparse_poly r;
             cra(r, v_first, v_end, m_first);
             return std::move(r);
         }
@@ -1060,21 +1066,7 @@ namespace cpp_multi_precision{
             const Divisor &div
         ){
             square_div_impl<Rem>(q, r, a, b, modulo, coe_modulo, div);
-
-            // !!
-            //if((a.container.size() <= 1 && a.affirmation_plus()) != (b.container.size() <= 1 && b.affirmation_plus())){
-            //    if(Rem){
-            //        if(a.affirmation_plus()){
-            //            r = a - abs_dispatch(q.constant_part()) * abs_dispatch(b.constant_part());
-            //        }else{
-            //            r = abs_dispatch(a.constant_part()) - abs_dispatch(q.constant_part()) * b;
-            //        }
-            //    }
-            //}
-
-            //!!
             if(Rem){ set_sign(r, get_sign_dispatch(b)); }
-
             return q;
         }
 
@@ -1495,7 +1487,7 @@ namespace cpp_multi_precision{
                 s_0 = std::move(s_m);
             }
             result = std::move(s_0);
-            result.mod_coefficient(m.container.begin()->second);
+            result = result.mod_coefficient(m.container.begin()->second);
             return result;
         }
 
@@ -1653,7 +1645,7 @@ namespace cpp_multi_precision{
                 r_0, r_1;
             modular_normal(r_0, f, p), modular_normal(r_1, g, p);
             rho_0 %= p, rho_1 %= p;
-            r_0.mod_coefficient(p), r_1.mod_coefficient(p);
+            r_0 = r_0.mod_coefficient(p), r_1 = r_1.mod_coefficient(p);
             while(!r_1.container.empty()){
                 sparse_poly q, inv_rho_1 = rho_1.modular_inverse(p), rho_m = rho_1;
                 sparse_poly r_m = r_1;
@@ -1664,7 +1656,7 @@ namespace cpp_multi_precision{
                         dummy_rem,
                         r_0,
                         r_1,
-                        [&](sparse_poly &r){ r.mod_coefficient(p); },
+                        [&](sparse_poly &r){ r = r.mod_coefficient(p); },
                         [&](coefficient_type &r){ r %= p; },
                         [&](const coefficient_type &x, const coefficient_type &y) -> coefficient_type{
                             return x * coefficient_inverse(y, p) % p;
@@ -1672,12 +1664,12 @@ namespace cpp_multi_precision{
                     );
                 }
                 sparse_poly q_r_1 = q * r_1;
-                q.mod_coefficient(p);
-                q_r_1.mod_coefficient(p);
+                q = q.mod_coefficient(p);
+                q_r_1 = q_r_1.mod_coefficient(p);
                 rho_1 = (r_0 - q_r_1).lu();
-                rho_1.mod_coefficient(p);
+                rho_1 = rho_1.mod_coefficient(p);
                 r_1 = (r_0 - q_r_1) * inv_rho_1;
-                r_1.mod_coefficient(p);
+                r_1 = r_1.mod_coefficient(p);
                 rho_0 = std::move(rho_m);
                 r_0 = std::move(r_m);
             }
@@ -1706,8 +1698,8 @@ namespace cpp_multi_precision{
                 t_0 = coefficient_type(0), t_1 = rho_1.modular_inverse(p);
             modular_normal(r_0, f, p), modular_normal(r_1, g, p);
             rho_0 %= p, rho_1 %= p;
-            r_0.mod_coefficient(p), r_1.mod_coefficient(p);
-            s_0.mod_coefficient(p), t_1.mod_coefficient(p);
+            r_0 = r_0.mod_coefficient(p), r_1 = r_1.mod_coefficient(p);
+            s_0 = s_0.mod_coefficient(p), t_1 = t_1.mod_coefficient(p);
             while(!r_1.container.empty()){
                 sparse_poly q, inv_rho_1 = rho_1.modular_inverse(p), rho_m = rho_1;
                 sparse_poly r_m = r_1, s_m = s_1, t_m = t_1;
@@ -1718,7 +1710,7 @@ namespace cpp_multi_precision{
                         dummy_rem,
                         r_0,
                         r_1,
-                        [&](sparse_poly &r){ r.mod_coefficient(p); },
+                        [&](sparse_poly &r){ r = r.mod_coefficient(p); },
                         [&](coefficient_type &r){ r %= p; },
                         [&](const coefficient_type &x, const coefficient_type &y) -> coefficient_type{
                             return x * coefficient_inverse(y, p) % p;
@@ -1727,16 +1719,12 @@ namespace cpp_multi_precision{
                     q = std::move(dummy_result);
                 }
                 sparse_poly q_r_1 = q * r_1;
-                q.mod_coefficient(p);
-                q_r_1.mod_coefficient(p);
-                rho_1 = (r_0 - q_r_1).lu();
-                rho_1.mod_coefficient(p);
-                r_1 = (r_0 - q_r_1) * inv_rho_1;
-                r_1.mod_coefficient(p);
-                s_1 = (s_0 - q * s_1) * inv_rho_1;
-                s_1.mod_coefficient(p);
-                t_1 = (t_0 - q * t_1) * inv_rho_1;
-                t_1.mod_coefficient(p);
+                q = q.mod_coefficient(p);
+                q_r_1 = q_r_1.mod_coefficient(p);
+                rho_1 = ((r_0 - q_r_1).lu()).mod_coefficient(p);
+                r_1 = ((r_0 - q_r_1) * inv_rho_1).mod_coefficient(p);
+                s_1 = ((s_0 - q * s_1) * inv_rho_1).mod_coefficient(p);
+                t_1 = ((t_0 - q * t_1) * inv_rho_1).mod_coefficient(p);
                 rho_0 = std::move(rho_m);
                 r_0 = std::move(r_m);
                 s_0 = std::move(s_m);
@@ -1848,8 +1836,14 @@ namespace cpp_multi_precision{
                 std::vector<std::pair<sparse_poly, prime_list_type::value_type>> vp_set;
                 vp_set.reserve(set.size());
                 for(std::size_t i = 0, length = set.size(); i < length; ++i){
-                    vp_set.push_back(std::make_pair(modular_gcd(f, g, set[i]), set[i]));
-                    vp_set.back().first.mod_coefficient(set[i]);
+                    // !!
+                    sparse_poly result_modular_gcd = modular_gcd(f, g, set[i]);
+                    std::cout
+                        << "PolynomialGCD[" << f << "," << g << ",Modulus->" << set[i] << "]=\n"
+                        << result_modular_gcd << "\n\n";
+                    vp_set.push_back(std::make_pair(result_modular_gcd, set[i]));
+
+                    vp_set.back().first = vp_set.back().first.mod_coefficient(set[i]);
                 }
                 {
                     order_type e = vp_set[0].first.deg();
@@ -1873,45 +1867,79 @@ namespace cpp_multi_precision{
                     v_set[i] = vp_set[i].first, set[i] = vp_set[i].second;
                 }
                 std::size_t l_ = to_unsigned_int_dispatch(l);
-                if(set.size() >= l_){ set.resize(l_), v_set.resize(l_); }
+                std::cout
+                    << "set.size()   = " << set.size() << "\n"
+                    << "v_set.size() = " << v_set.size() << "\n"
+                    << "l = " << l_ << "\n";
+                if(set.size() >= l_){
+                    set.erase(set.begin(), set.begin() + (set.size() - l_));
+                    v_set.erase(v_set.begin(), v_set.begin() + (v_set.size() - l_));
+                }
             }
 
-            {
-                std::size_t i_length = 0;
-                for(coefficient_type p = 1; p < large_a; ){ p *= set[i_length++]; }
-                std::vector<sparse_poly> w;
-                {
-                    storaged_container<1>::vector<coefficient_type> m;
-                    storaged_container<1>::vector<sparse_poly> v;
-                    std::vector<typename container_type::iterator> w_iter;
-                    w.reserve(i_length);
-                    for(std::size_t i = 0; i < i_length; ++i){
-                        m.clear(), v.clear();
-                        m.push_back(set[i]), v.push_back(v_set[i] * b);
-                        w.push_back(cra(v.begin(), v.end(), m.begin()));
-                    }
-                }
-                std::vector<typename container_type::const_iterator> orthogonal_w_iterator_vec;
-                orthogonal_w_iterator_vec.reserve(set.size());
-                for(std::size_t i = 0 ,length = w.size(); i < length; ++i){
-                    orthogonal_w_iterator_vec.push_back(w[i].container.begin());
-                }
-                concurrent_orthogonal_w_iterator d(orthogonal_w_iterator_vec);
-                typename container_type::const_iterator
-                    w_element_iter = w.front().container.begin(),
-                    w_element_end = w.front().container.end();
-                for(; w_element_iter != w_element_end; ++w_element_iter, ++d){
-                    sparse_poly r =
-                        cra(
-                            *d,
-                            orthogonal_w_iterrator<concurrent_orthogonal_w_iterator>::end(i_length),
-                            set.begin()
-                        );
-                    r.radix_shift(w_element_iter->first);
-                    result += r;
+            std::cout
+                << "set.size()   = " << set.size() << "\n"
+                << "v_set.size() = " << v_set.size() << "\n";
+
+            std::cout << "ChineseRemainder[{";
+            for(std::size_t i = 0, length = v_set.size(); i < length; ++i){
+                v_set[i] *=b;
+                std::cout << v_set[i];
+                if(i + 1 != length){
+                    std::cout << ", ";
+                }else{
+                    std::cout << "}, {";
                 }
             }
+            for(std::size_t i = 0, length = set.size(); i < length; ++i){
+                std::cout << set[i];
+                if(i + 1 != length){
+                    std::cout << ", ";
+                }else{
+                    std::cout << "}]\n";
+                }
+            }
+            result = cra(v_set.begin(), v_set.end(), set.begin());
+            std::cout << result << "\n";
             result = result.pp();
+
+            //{
+            //    std::size_t i_length = 0;
+            //    for(coefficient_type p = 1; p < large_a; ){ p *= set[i_length++]; }
+            //    std::vector<sparse_poly> w;
+            //    {
+            //        storaged_container<1>::vector<coefficient_type> m;
+            //        storaged_container<1>::vector<sparse_poly> v;
+            //        std::vector<typename container_type::iterator> w_iter;
+            //        w.reserve(i_length);
+            //        for(std::size_t i = 0; i < i_length; ++i){
+            //            m.clear(), v.clear();
+            //            m.push_back(set[i]), v.push_back(v_set[i] * b);
+            //            w.push_back(cra(v.begin(), v.end(), m.begin()));
+            //        }
+            //    }
+            //    std::vector<typename container_type::const_iterator> orthogonal_w_iterator_vec;
+            //    orthogonal_w_iterator_vec.reserve(set.size());
+            //    for(std::size_t i = 0 ,length = w.size(); i < length; ++i){
+            //        orthogonal_w_iterator_vec.push_back(w[i].container.begin());
+            //    }
+            //    concurrent_orthogonal_w_iterator d(orthogonal_w_iterator_vec);
+            //    typename container_type::const_iterator
+            //        w_element_iter = w.front().container.begin(),
+            //        w_element_end = w.front().container.end();
+            //    for(; w_element_iter != w_element_end; ++w_element_iter, ++d){
+            //        sparse_poly r =
+            //            cra(
+            //                *d,
+            //                orthogonal_w_iterrator<concurrent_orthogonal_w_iterator>::end(i_length),
+            //                set.begin()
+            //            );
+            //        r.radix_shift(w_element_iter->first);
+            //        result += r;
+            //    }
+            //}
+            //result = result.pp();
+            
             return result;
         }
 

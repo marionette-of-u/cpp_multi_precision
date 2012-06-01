@@ -85,15 +85,6 @@ void test_sparse_poly(){
     typedef cpp_multi_precision::sparse_poly<integer, rational> sparse_poly;
     typedef cpp_multi_precision::sparse_poly<integer, integer> z_field_sparse_poly;
 
-    //std::cout
-    //    << integer(-160056) % integer(7723) << "\n"
-    //    << integer(-306456) % integer(7727) << "\n"
-    //    << integer(-669264) % integer(7741) << "\n"
-    //    << integer(239838) % integer(7753) << "\n"
-    //    << integer(-2110) % integer(7757) << "\n"
-    //    << integer(686700) % integer(7759) << "\n"
-    //    << integer(-130650) % integer(7789) << "\n";
-
     std::cout << "start test_sparse_poly\n";
 
     z_field_sparse_poly za, zb, zs, zt;
@@ -105,86 +96,32 @@ void test_sparse_poly(){
     std::cout << "bezout coefficient = " << zs << " : " << zt << "\n";
     std::cout << "modular gcd (linear combination) = " << (za * zs + zb * zt).mod_coefficient(7) << "\n";
 
-    // cra 壊れてます
-    {
-        std::vector<z_field_sparse_poly> vec_v;
-        std::vector<z_field_sparse_poly::coefficient_type> vec_m;
-        z_field_sparse_poly::coefficient_type a;
-        z_field_sparse_poly b;
-
-#define PUSH_V(n) b [0](n); vec_v.push_back(b); b = 0;
-#define PUSH_M(n) a = n; vec_m.push_back(a); a = 0;
-        PUSH_V(572);
-        PUSH_V(558);
-        PUSH_V(540);
-        PUSH_V(536);
-        PUSH_V(530);
-        PUSH_V(510);
-        PUSH_V(506);
-        PUSH_V(498);
-        PUSH_V(492);
-        PUSH_V(488);
-        PUSH_V(480);
-        PUSH_V(476);
-        PUSH_V(462);
-        PUSH_V(456);
-        PUSH_V(452);
-        PUSH_V(438);
-        PUSH_V(426);
-        PUSH_V(422);
-        PUSH_V(420);
-        PUSH_V(390);
-
-        PUSH_M(7607);
-        PUSH_M(7621);
-        PUSH_M(7639);
-        PUSH_M(7643);
-        PUSH_M(7649);
-        PUSH_M(7669);
-        PUSH_M(7673);
-        PUSH_M(7681);
-        PUSH_M(7687);
-        PUSH_M(7691);
-        PUSH_M(7699);
-        PUSH_M(7703);
-        PUSH_M(7717);
-        PUSH_M(7723);
-        PUSH_M(7727);
-        PUSH_M(7741);
-        PUSH_M(7753);
-        PUSH_M(7757);
-        PUSH_M(7759);
-        PUSH_M(7789);
-
-        std::cout << z_field_sparse_poly::cra(vec_v.begin(), vec_v.end(), vec_m.begin()) << "\n";
-    }
-
-    //// 壊れてます
     //za = 0, zb = 0;
-    //za [4](5) [3](2);
+    //za [100](5) [3](2);
     //zb [2](2);
     //std::cout << z_field_sparse_poly::primitive_gcd(za, zb) << "\n";
-    //za = 0, zb = 0;
-    //za [10](8161) [9](8167) [8](8171) [7](8179);
-    //zb [6](8161) [5](8167) [4](8171) [3](8179);
-    //std::cout << z_field_sparse_poly::primitive_gcd(za, zb) << "\n";
 
-    //sparse_poly poly_a, poly_b, poly_c, poly_r, poly_cl, poly_cr;
-    //// a += 18 * x^3
-    //poly_a[3] = 18;
-    //// a -= 42 * x^2
-    //poly_a[2] -= 42;
-    //// a += 30 * x
-    //poly_a[1] = 30;
-    //// a -= 6
-    //poly_a[0] -= 6;
+    za = 0, zb = 0;
+    za [8](8161) [7](8167) [6](8171) [5](8179);
+    zb [3](8171) [2](8179);
+    std::cout << z_field_sparse_poly::primitive_gcd(za, zb) << "\n";
 
-    //// b -= 12 * x^2
-    //poly_b[2] -= 12;
-    //// b += 10 * x
-    //poly_b[1] = 10;
-    //// b -= 2
-    //poly_b[0] -= 2;
+    sparse_poly poly_a, poly_b, poly_c, poly_r, poly_cl, poly_cr;
+    // a += 18 * x^3
+    poly_a[3] = 18;
+    // a -= 42 * x^2
+    poly_a[2] -= 42;
+    // a += 30 * x
+    poly_a[1] = 30;
+    // a -= 6
+    poly_a[0] -= 6;
+
+    // b -= 12 * x^2
+    poly_b[2] -= 12;
+    // b += 10 * x
+    poly_b[1] = 10;
+    // b -= 2
+    poly_b[0] -= 2;
 
     //poly_c = poly_a * poly_b;
     //sparse_poly::eea(poly_r, poly_cl, poly_cr, poly_a, poly_b);
